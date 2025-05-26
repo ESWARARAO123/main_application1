@@ -102,7 +102,7 @@ const Chatbot: React.FC = () => {
   } = useMCPChat();
 
   // Tool execution state
-  const { isExecutingTool, currentTool, executeTool } = useToolExecution();
+  const { isExecutingTool, currentTool, executeTool } = useToolExecution(isMCPEnabled);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -341,8 +341,8 @@ const Chatbot: React.FC = () => {
     // Allow sending if there's text or a file
     if ((content.trim() === '' && !file) || isLoading || isUploading) return;
 
-    // Special handling for read_context command - only trigger for exact match
-    if (content.trim().toLowerCase() === 'read_context') {
+    // Special handling for read_context command - only trigger when MCP is enabled
+    if (content.trim().toLowerCase() === 'read_context' && isMCPEnabled) {
       console.log('Detected exact read_context command, triggering context tool directly');
       const aiMessage = createContextToolMessage();
       setMessages(prev => [...prev, aiMessage]);
@@ -402,7 +402,8 @@ const Chatbot: React.FC = () => {
       isRagAvailable, 
       isRagEnabled, 
       setMessages, 
-      fetchSessions
+      fetchSessions,
+      isMCPEnabled
     );
     
     // Update active session ID if needed
@@ -611,6 +612,7 @@ const Chatbot: React.FC = () => {
             loadingMessages={loadingMessages}
             isEmpty={isEmpty}
             conversationId={activeSessionId || undefined}
+            isMCPEnabled={isMCPEnabled}
           />
 
           <div
@@ -638,6 +640,7 @@ const Chatbot: React.FC = () => {
               isMCPAvailable={isMCPConnected}
               isMCPEnabled={isMCPEnabled}
               onToggleMCP={handleToggleMCP}
+              onFileUploadSuccess={() => {}}
             />
 
             {isEmpty && (

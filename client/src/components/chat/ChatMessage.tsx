@@ -28,9 +28,10 @@ interface ChatMessageProps {
   message: ExtendedChatMessage;
   isAI?: boolean;
   conversationId?: string;
+  isMCPEnabled?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conversationId }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conversationId, isMCPEnabled = false }) => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showSources, setShowSources] = useState<boolean>(false);
   const [contextResult, setContextResult] = useState<any>(null);
@@ -672,6 +673,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                   toolText={toolText}
                   messageId={message.id}
                   conversationId={conversationId || message.conversationId}
+                  isMCPEnabled={isMCPEnabled}
                   key={`context-button-${message.id}-${lastUpdated}`} // Add key with lastUpdated to force re-render
                 />
               </>
@@ -772,6 +774,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                     messageId={message.id}
                     conversationId={conversationId || message.conversationId}
                     command={shellCommand}
+                    isMCPEnabled={isMCPEnabled}
                     key={`shell-command-button-${message.id}-${lastUpdated}`}
                   />
                 )}

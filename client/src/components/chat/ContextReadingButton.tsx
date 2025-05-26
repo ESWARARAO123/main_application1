@@ -10,6 +10,7 @@ interface ContextReadingButtonProps {
   toolText?: string;
   messageId?: string;
   conversationId?: string;
+  isMCPEnabled?: boolean;
 }
 
 /**
@@ -21,7 +22,8 @@ const ContextReadingButton: React.FC<ContextReadingButtonProps> = ({
   onComplete,
   toolText,
   messageId,
-  conversationId
+  conversationId,
+  isMCPEnabled = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -89,6 +91,19 @@ const ContextReadingButton: React.FC<ContextReadingButtonProps> = ({
 
   const handleReadContext = async () => {
     if (isLoading || isComplete) return;
+
+    // Check if MCP is enabled before allowing tool execution
+    if (!isMCPEnabled) {
+      console.log('Context tool execution blocked - MCP is disabled');
+      onComplete(
+        { 
+          success: false, 
+          error: 'Tool execution is only available when MCP mode is enabled' 
+        },
+        'I cannot execute tools when MCP mode is disabled. Please enable MCP mode to access your context preferences.'
+      );
+      return;
+    }
 
     setIsLoading(true);
     setLoadingStage('reading');

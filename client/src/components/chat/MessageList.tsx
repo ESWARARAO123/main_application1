@@ -17,6 +17,7 @@ interface MessageListProps {
   loadingMessages: boolean;
   isEmpty?: boolean;
   conversationId?: string; // Current conversation ID
+  isMCPEnabled?: boolean; // MCP status for tool execution
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -26,7 +27,8 @@ const MessageList: React.FC<MessageListProps> = ({
   loadMoreMessages,
   loadingMessages,
   isEmpty = false,
-  conversationId
+  conversationId,
+  isMCPEnabled = false
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -139,6 +141,7 @@ const MessageList: React.FC<MessageListProps> = ({
                   message={message}
                   isAI={group.role === 'assistant'}
                   conversationId={conversationId || message.conversationId}
+                  isMCPEnabled={isMCPEnabled}
                 />
               </div>
             ))}

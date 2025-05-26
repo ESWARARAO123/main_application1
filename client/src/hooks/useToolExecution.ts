@@ -12,7 +12,7 @@ interface ToolExecutionState {
  * Hook for handling tool execution in chat
  * @returns Tool execution state and functions
  */
-export const useToolExecution = (): ToolExecutionState => {
+export const useToolExecution = (isMCPEnabled: boolean = false): ToolExecutionState => {
   const [isExecutingTool, setIsExecutingTool] = useState<boolean>(false);
   const [currentTool, setCurrentTool] = useState<string | null>(null);
 
@@ -26,6 +26,12 @@ export const useToolExecution = (): ToolExecutionState => {
     const toolCall = extractToolCall(text);
     if (!toolCall) {
       return text;
+    }
+
+    // Check if MCP is enabled for tool execution
+    if (!isMCPEnabled) {
+      console.log(`Tool execution blocked: ${toolCall.toolName} - MCP is disabled`);
+      return `[Tool execution blocked: ${toolCall.toolName} is only available when MCP mode is enabled]`;
     }
 
     // Special handling for read_context tool - don't execute automatically
@@ -73,7 +79,7 @@ export const useToolExecution = (): ToolExecutionState => {
       setIsExecutingTool(false);
       setCurrentTool(null);
     }
-  }, []);
+  }, [isMCPEnabled]);
 
   /**
    * Formats a tool result for display

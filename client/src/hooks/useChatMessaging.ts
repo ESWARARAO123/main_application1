@@ -97,7 +97,8 @@ export const useChatMessaging = () => {
     isRagAvailable: boolean,
     isRagEnabled: boolean,
     setMessages: React.Dispatch<React.SetStateAction<ExtendedChatMessage[]>>,
-    fetchSessions: () => Promise<void>
+    fetchSessions: () => Promise<void>,
+    isMCPEnabled: boolean = false
   ) => {
     // Allow sending if there's text or a file
     if ((content.trim() === '' && !file) || isLoading || isUploading) return;
@@ -123,6 +124,56 @@ export const useChatMessaging = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    
+    // Handle file uploads separately
+    if (file) {
+      setIsUploading(true);
+      
+      try {
+        const response = await chatbotService.sendMessageWithFile(
+          displayContent,
+          file,
+          activeSessionId || undefined,
+          (progress) => setUploadProgress(progress)
+        );
+
+        // Update the message with the server response
+        setMessages(prev => {
+          const filteredMessages = prev.filter(m => m.id !== tempId);
+          return [
+            ...filteredMessages,
+            {
+              ...userMessage,
+              id: `user-${Date.now()}`,
+              fileAttachment: {
+                ...userMessage.fileAttachment!,
+                documentId: response.fileAttachment?.documentId,
+                status: 'PROCESSING'
+              }
+            },
+            {
+              id: response.id,
+              role: 'assistant',
+              content: response.content,
+              timestamp: new Date()
+            }
+          ];
+        });
+
+        await fetchSessions();
+        setIsUploading(false);
+        setUploadProgress(0);
+
+        // Return the new session ID if needed
+        return { success: true, newSessionId: response.sessionId };
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setIsUploading(false);
+        setUploadProgress(0);
+        return { success: false, error };
+      }
+    }
     
     setIsLoading(true);
 
@@ -212,9 +263,10 @@ export const useChatMessaging = () => {
         // Base system prompt
         let systemPromptContent = 'You are a helpful AI assistant. Answer the user\'s questions accurately and concisely.';
 
-        // Apply context to the system prompt using our utility function with shell command capabilities
+        // Apply context to the system prompt using our utility function
+        // Only enable shell commands if MCP is enabled
         systemPromptContent = applyContextToPrompt(systemPromptContent, messages, {
-          enableShellCommands: true
+          enableShellCommands: isMCPEnabled // Only enabled when MCP is active
         });
 
         // Log the system prompt with context for debugging

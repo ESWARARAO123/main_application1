@@ -29,6 +29,7 @@ interface ChatInputProps {
   isMCPAvailable?: boolean;
   isMCPEnabled?: boolean;
   onToggleMCP?: () => void;
+  onFileUploadSuccess?: () => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -44,7 +45,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onToggleRag,
   isMCPAvailable = false,
   isMCPEnabled = false,
-  onToggleMCP
+  onToggleMCP,
+  onFileUploadSuccess
 }) => {
   const [input, setInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -67,6 +69,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
       textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
     }
   }, [input]);
+
+  // Clear selected file when upload starts (since we trigger the upload)
+  useEffect(() => {
+    if (isUploading && selectedFile) {
+      // Clear the file when upload starts
+      setSelectedFile(null);
+    }
+  }, [isUploading, selectedFile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

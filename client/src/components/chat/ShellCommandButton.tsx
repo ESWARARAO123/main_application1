@@ -11,6 +11,7 @@ interface ShellCommandButtonProps {
   messageId?: string;
   conversationId?: string;
   command: string;
+  isMCPEnabled?: boolean;
 }
 
 /**
@@ -23,7 +24,8 @@ const ShellCommandButton: React.FC<ShellCommandButtonProps> = ({
   toolText,
   messageId,
   conversationId,
-  command
+  command,
+  isMCPEnabled = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -75,6 +77,21 @@ const ShellCommandButton: React.FC<ShellCommandButtonProps> = ({
 
   const handleRunCommand = async () => {
     if (isLoading || isComplete || isDeclined || hasExecuted.current) return;
+
+    // Check if MCP is enabled before allowing tool execution
+    if (!isMCPEnabled) {
+      console.log('Shell command execution blocked - MCP is disabled');
+      const errorResponse = 'Shell command execution is only available when MCP mode is enabled. Please enable MCP mode to execute commands.';
+      onComplete(
+        { 
+          success: false, 
+          error: 'Tool execution blocked - MCP mode is disabled',
+          command: command
+        },
+        errorResponse
+      );
+      return;
+    }
 
     setIsLoading(true);
     setLoadingStage('executing');
