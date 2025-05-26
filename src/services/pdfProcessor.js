@@ -36,8 +36,8 @@ function getPythonConfig() {
 async function extractTextAndTablesSmart(filePath) {
   return new Promise((resolve) => {
     try {
-      // Path to the Python script for table extraction
-      const pythonScriptPath = path.resolve(process.cwd(), 'python/extract_text_with_tables.py');
+      // Path to the Python script for table extraction (updated to RAG-MODULE folder)
+      const pythonScriptPath = path.resolve(process.cwd(), 'python/RAG-MODULE/extract_text_with_tables.py');
       
       // Check if the Python script exists
       if (!fs.existsSync(pythonScriptPath)) {
