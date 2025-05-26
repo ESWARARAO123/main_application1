@@ -3,7 +3,7 @@
  * Run with: node test_table_extraction.js sample.pdf
  */
 
-const { extractTextAndTablesSmart } = require('./src/services/pdfProcessor');
+const { extractTextAndTablesSmart } = require('../../../src/services/pdfProcessor');
 const fs = require('fs');
 const path = require('path');
 

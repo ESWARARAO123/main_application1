@@ -83,12 +83,34 @@ class RAGService {
       }
 
       console.log(`RAG: Successfully generated query embedding, searching for relevant chunks...`);
+      
+      // Table-specific query expansion
+      let isTableQuery = false;
+      let tableReference = null;
+      
+      // Check if this is a query about tables
+      if (query.toLowerCase().includes('table')) {
+        isTableQuery = true;
+        // Extract table references like "Table 2-2" or "table 2.2"
+        const tableRefMatch = query.match(/table\s+(\d+[-\.]\d+)/i);
+        if (tableRefMatch) {
+          tableReference = tableRefMatch[0];
+          console.log(`RAG: Detected table reference: ${tableReference}`);
+        }
+      }
+
+      // Search options with increased limit for table queries
+      const searchOptions = {
+        sessionId,
+        limit: isTableQuery ? 10 : topK, // Increase limit for table queries
+        isTableQuery,
+        tableReference
+      };
 
       // Search for relevant documents - pass sessionId as an option
       const searchResult = await this.vectorStoreService.search(
         embedResult.embedding,
-        topK,
-        { sessionId }  // Pass sessionId in search options
+        searchOptions
       );
 
       if (!searchResult.success) {
@@ -111,22 +133,58 @@ class RAGService {
 
       console.log(`RAG: Found ${searchResult.results.length} relevant chunks`);
 
+      // For table queries, prioritize chunks that contain table markers
+      let results = searchResult.results;
+      if (isTableQuery) {
+        // Boost scores for chunks that contain table markers
+        results = results.map(result => {
+          // Check if the chunk contains table markers
+          const hasTableMarker = result.text.match(/###\s+(?:Table|Extracted Table)/i);
+          
+          // If it has a table reference and matches the one in query, boost the score significantly
+          if (tableReference && result.text.toLowerCase().includes(tableReference.toLowerCase())) {
+            return {
+              ...result,
+              score: result.score * 1.5, // 50% boost
+              containsRequestedTable: true
+            };
+          } 
+          // If it has any table, boost the score slightly
+          else if (hasTableMarker) {
+            return {
+              ...result,
+              score: result.score * 1.2, // 20% boost
+              containsTable: true
+            };
+          }
+          
+          return result;
+        });
+        
+        // Re-sort by the adjusted scores
+        results.sort((a, b) => b.score - a.score);
+      }
+
       // Prepare context from retrieved documents
-      const context = searchResult.results
+      const context = results
         .map(result => result.text)
         .join('\n\n---\n\n');
 
       // Format sources for citation
-      const sources = searchResult.results.map(result => ({
+      const sources = results.map(result => ({
         text: result.text.substring(0, 150) + (result.text.length > 150 ? '...' : ''),
         metadata: result.metadata,
-        score: result.score
+        score: result.score,
+        containsTable: result.containsTable || false,
+        containsRequestedTable: result.containsRequestedTable || false
       }));
 
       return {
         success: true,
         context,
-        sources
+        sources,
+        isTableQuery,
+        tableReference
       };
     } catch (error) {
       console.error(`RAG: Error retrieving context:`, error);

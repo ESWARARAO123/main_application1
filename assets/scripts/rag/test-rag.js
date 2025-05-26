@@ -3,7 +3,7 @@
  * This script tests the RAG service by initializing it and performing a simple query
  */
 
-const ragService = require('./src/services/ragService');
+const ragService = require('../../../src/services/ragService');
 
 async function testRag() {
   try {

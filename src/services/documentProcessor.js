@@ -544,8 +544,8 @@ class DocumentProcessor {
   async extractTextSmart(filePath) {
     return new Promise((resolve) => {
       try {
-        // Path to the Python script in the python directory
-        const pythonScriptPath = path.resolve(process.cwd(), 'python/extract_text.py');
+        // Path to the Python script in the python/RAG-MODULE directory
+        const pythonScriptPath = path.resolve(process.cwd(), 'python/RAG-MODULE/extract_text.py');
         
         // Check if the Python script exists
         if (!fs.existsSync(pythonScriptPath)) {

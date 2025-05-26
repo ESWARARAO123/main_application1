@@ -198,11 +198,10 @@ class VectorStoreService {
   /**
    * Search for similar documents using a query embedding
    * @param {Array} queryEmbedding - Query embedding vector
-   * @param {number} limit - Number of results to return
    * @param {Object} options - Additional search options
    * @returns {Promise<Object>} Search results
    */
-  async search(queryEmbedding, limit = 5, options = {}) {
+  async search(queryEmbedding, options = {}) {
     if (!await this.initialize()) {
       return {
         success: false,
@@ -211,7 +210,10 @@ class VectorStoreService {
     }
 
     try {
+      // Extract options with defaults
+      const limit = options.limit || 10; // Increased from 5 to 10
       const { sessionId } = options;
+      
       console.log(`Searching with options:`, {
         limit,
         sessionId: sessionId || 'not specified',
@@ -239,7 +241,7 @@ class VectorStoreService {
         // Build the query parameters
         const queryParams = {
           queryEmbeddings: [queryEmbedding],
-          nResults: limit,
+          nResults: limit, // Use the configured limit
           include: ['documents', 'metadatas', 'distances']
         };
 
@@ -323,7 +325,7 @@ class VectorStoreService {
 
       const topResults = similarities
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
+        .slice(0, limit); // Use the configured limit
 
       return {
         success: true,

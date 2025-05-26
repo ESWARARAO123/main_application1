@@ -3,7 +3,7 @@
  * Run with: node test_header_chunking.js
  */
 
-const { chunkBySection } = require('./src/utils/headerChunker');
+const { chunkBySection } = require('../../../src/utils/headerChunker');
 
 // Sample document with section headers
 const sampleDocument = `Technical Whitepaper: Advanced Processing System

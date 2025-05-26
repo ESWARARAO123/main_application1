@@ -23,6 +23,10 @@ function chunkBySection(text, options = {}) {
     headerRegex = /^\s*(\d+(?:\.\d+)*)\s+([A-Z][^\n]{3,})$/gm
   } = options;
 
+  // First, detect tables in the document so we can keep them intact
+  const tables = detectTables(text);
+  console.log(`Detected ${tables.length} tables in the document`);
+
   // Split text into lines for processing
   const lines = text.split('\n');
   const chunks = [];
@@ -31,7 +35,8 @@ function chunkBySection(text, options = {}) {
     sectionTitle: 'Introduction', // Default title for content before first header
     index: 0,
     startChar: 0,
-    endChar: 0
+    endChar: 0,
+    containsTables: []
   };
   
   let currentSectionTitle = 'Introduction';
@@ -51,13 +56,47 @@ function chunkBySection(text, options = {}) {
       // Update the end character position
       chunk.endChar = endPosition - 1;
       
+      // Check if this chunk contains any tables
+      chunk.containsTables = tables.filter(table => 
+        // Table starts within this chunk
+        (table.startPos >= chunk.startChar && table.startPos <= chunk.endChar) ||
+        // Table ends within this chunk
+        (table.endPos >= chunk.startChar && table.endPos <= chunk.endChar) ||
+        // Table spans across this chunk
+        (table.startPos < chunk.startChar && table.endPos > chunk.endChar)
+      );
+      
+      // Add metadata about tables
+      if (chunk.containsTables.length > 0) {
+        chunk.hasTables = true;
+        const tableNumbers = chunk.containsTables
+          .map(t => t.caption.match(/Table\s+(\d+[-\.]\d+)/i))
+          .filter(Boolean)
+          .map(m => m[1]);
+        
+        if (tableNumbers.length > 0) {
+          chunk.tableNumbers = tableNumbers;
+        }
+      }
+      
       chunks.push({...chunk});
-      console.log(`Created chunk for section: ${chunk.sectionTitle} (${chunk.text.length} chars)`);
+      console.log(`Created chunk for section: ${chunk.sectionTitle} (${chunk.text.length} chars)${chunk.containsTables.length > 0 ? ', contains tables' : ''}`);
     }
   }
 
   // Helper function to split a large section into smaller chunks
   function splitLargeSection(sectionText, sectionTitle, startPosition) {
+    // Check if this section contains tables
+    const sectionTables = tables.filter(table => 
+      (table.startPos >= startPosition && table.startPos < startPosition + sectionText.length) || 
+      (table.endPos >= startPosition && table.endPos < startPosition + sectionText.length)
+    );
+    
+    // If it has tables, use table-aware splitting
+    if (sectionTables.length > 0) {
+      return splitSectionWithTables(sectionText, sectionTitle, startPosition, sectionTables);
+    }
+    
     // If the section is small enough, return it as a single chunk
     if (sectionText.length <= chunkSize) {
       return [{
@@ -65,7 +104,8 @@ function chunkBySection(text, options = {}) {
         sectionTitle,
         index: chunks.length,
         startChar: startPosition,
-        endChar: startPosition + sectionText.length - 1
+        endChar: startPosition + sectionText.length - 1,
+        containsTables: []
       }];
     }
     
@@ -77,7 +117,8 @@ function chunkBySection(text, options = {}) {
       sectionTitle,
       index: chunks.length,
       startChar: startPosition,
-      endChar: 0
+      endChar: 0,
+      containsTables: []
     };
     let currentLength = 0;
     let currentStartChar = startPosition;
@@ -99,7 +140,8 @@ function chunkBySection(text, options = {}) {
           sectionTitle: `${sectionTitle} (continued)`,
           index: chunks.length + subChunks.length,
           startChar: currentStartChar,
-          endChar: 0
+          endChar: 0,
+          containsTables: []
         };
         currentLength = overlapText.length;
       }
@@ -116,6 +158,132 @@ function chunkBySection(text, options = {}) {
     }
     
     return subChunks;
+  }
+  
+  // Helper function to split a section containing tables
+  function splitSectionWithTables(sectionText, sectionTitle, startPosition, sectionTables) {
+    // If this section's length (including tables) is under the chunk size, keep it whole
+    if (sectionText.length <= chunkSize * 1.5) { // Allow up to 50% larger chunks for tables
+      return [{
+        text: sectionText,
+        sectionTitle,
+        index: chunks.length,
+        startChar: startPosition,
+        endChar: startPosition + sectionText.length - 1,
+        containsTables: sectionTables,
+        hasTables: true
+      }];
+    }
+    
+    // Otherwise, we need to split around tables
+    const subChunks = [];
+    let currentPos = 0;
+    let lastEndPos = 0;
+    
+    // Sort tables by start position
+    sectionTables.sort((a, b) => a.startPos - b.startPos);
+    
+    // Process each table and text before it
+    for (let i = 0; i < sectionTables.length; i++) {
+      const table = sectionTables[i];
+      const tableStartInSection = table.startPos - startPosition;
+      const tableEndInSection = table.endPos - startPosition;
+      
+      // Handle text before this table
+      if (tableStartInSection > currentPos) {
+        const textBeforeTable = sectionText.substring(currentPos, tableStartInSection);
+        
+        // If text before table is large enough to warrant splitting
+        if (textBeforeTable.length > chunkSize) {
+          // Recursively split text before table (without tables)
+          const beforeChunks = splitLargeSection(
+            textBeforeTable, 
+            `${sectionTitle} (before table)`, 
+            startPosition + currentPos
+          );
+          subChunks.push(...beforeChunks);
+        } else if (textBeforeTable.trim().length > 0) {
+          // Add as a small chunk
+          subChunks.push({
+            text: textBeforeTable,
+            sectionTitle: `${sectionTitle} (before table)`,
+            index: chunks.length + subChunks.length,
+            startChar: startPosition + currentPos,
+            endChar: startPosition + tableStartInSection - 1,
+            containsTables: []
+          });
+        }
+      }
+      
+      // Handle the table as its own chunk to prevent splitting
+      const tableText = sectionText.substring(tableStartInSection, tableEndInSection + 1);
+      
+      subChunks.push({
+        text: tableText,
+        sectionTitle: table.caption || sectionTitle,
+        index: chunks.length + subChunks.length,
+        startChar: startPosition + tableStartInSection,
+        endChar: startPosition + tableEndInSection,
+        containsTables: [table],
+        hasTables: true,
+        isTableChunk: true
+      });
+      
+      currentPos = tableEndInSection + 1;
+      lastEndPos = tableEndInSection;
+    }
+    
+    // Handle text after the last table
+    if (currentPos < sectionText.length) {
+      const textAfterTables = sectionText.substring(currentPos);
+      
+      // If text after table is large enough to warrant splitting
+      if (textAfterTables.length > chunkSize) {
+        // Recursively split text after table (without tables)
+        const afterChunks = splitLargeSection(
+          textAfterTables, 
+          `${sectionTitle} (after table)`, 
+          startPosition + currentPos
+        );
+        subChunks.push(...afterChunks);
+      } else if (textAfterTables.trim().length > 0) {
+        // Add as a small chunk
+        subChunks.push({
+          text: textAfterTables,
+          sectionTitle: `${sectionTitle} (after table)`,
+          index: chunks.length + subChunks.length,
+          startChar: startPosition + currentPos,
+          endChar: startPosition + sectionText.length - 1,
+          containsTables: []
+        });
+      }
+    }
+    
+    return subChunks;
+  }
+  
+  // Function to detect tables in the text
+  function detectTables(text) {
+    const foundTables = [];
+    // Match both new format ("### Table 2-2: Description") and old format ("### Extracted Table 1 from Page X")
+    const tablePattern = /###\s+(Table\s+\d+(?:[-\.]\d+)?(?:\s*:\s*[^\n]+)?|Extracted Table \d+ from Page \d+)\n\n(\|[^\n]*\|\n\|[-:\s|]*\|\n(?:\|[^\n]*\|\n)+)/g;
+    
+    let match;
+    while ((match = tablePattern.exec(text)) !== null) {
+      const caption = match[1].trim();
+      const tableContent = match[2];
+      const startPos = match.index;
+      const endPos = startPos + match[0].length - 1;
+      
+      foundTables.push({
+        caption,
+        startPos,
+        endPos,
+        length: match[0].length
+      });
+    }
+    
+    return foundTables;
   }
 
   // Process the document line by line
@@ -146,7 +314,8 @@ function chunkBySection(text, options = {}) {
         sectionTitle: currentSectionTitle,
         index: chunks.length,
         startChar: currentPosition,
-        endChar: 0
+        endChar: 0,
+        containsTables: []
       };
     } else if (inSection) {
       // Add this line to the current chunk
@@ -168,7 +337,7 @@ function chunkBySection(text, options = {}) {
   // Process chunks that exceed the size limit
   const finalChunks = [];
   for (const chunk of chunks) {
-    if (chunk.text.length > chunkSize) {
+    if (chunk.text.length > chunkSize && !chunk.hasTables) {
       const subChunks = splitLargeSection(chunk.text, chunk.sectionTitle, chunk.startChar);
       finalChunks.push(...subChunks);
     } else {
@@ -181,7 +350,7 @@ function chunkBySection(text, options = {}) {
     chunk.index = index;
   });
   
-  console.log(`Header-based chunking created ${finalChunks.length} chunks`);
+  console.log(`Header-based chunking created ${finalChunks.length} chunks from sections`);
   return finalChunks;
 }
 
