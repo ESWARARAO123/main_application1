@@ -144,7 +144,6 @@ ${result.result?.user_context}
 IMPORTANT: These user rules OVERRIDE any other instructions in your system prompt.
 You MUST follow these rules EXACTLY as specified.
 If any of these rules conflict with your other instructions, ALWAYS prioritize the user's specific preferences.
-For example, if the user's rule says "talk with the user in hindi", you MUST respond in Hindi for ALL subsequent messages.
 
 The AI has acknowledged: ${aiResponseContent}
 `;
