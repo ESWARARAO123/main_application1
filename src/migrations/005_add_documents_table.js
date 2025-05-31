@@ -1,5 +1,5 @@
 /**
- * Migration to add documents table and update messages table to support file attachments
+ * Migration to add documents table
  */
 
 const { pool } = require('../database');
@@ -9,12 +9,12 @@ async function up() {
   try {
     await client.query('BEGIN');
 
-    // Create documents table
+    // Create documents table with complete structure (without document_collections FK for now)
     await client.query(`
       CREATE TABLE IF NOT EXISTS documents (
         id SERIAL PRIMARY KEY,
         user_id UUID NOT NULL,
-        filename VARCHAR(255) NOT NULL,
+        filename VARCHAR(255) DEFAULT '' NOT NULL,
         original_name VARCHAR(255) NOT NULL,
         file_path TEXT NOT NULL,
         file_type VARCHAR(100) NOT NULL,
@@ -24,35 +24,21 @@ async function up() {
         collection_id UUID,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        last_activity_timestamp TIMESTAMP WITH TIME ZONE,
+        mime_type VARCHAR(255),
+        session_id UUID,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE SET NULL
       )
     `);
 
-    // Add file_path and document_id columns to messages table
+    // Create index on session_id
     await client.query(`
-      ALTER TABLE messages
-      ADD COLUMN IF NOT EXISTS file_path TEXT,
-      ADD COLUMN IF NOT EXISTS document_id INTEGER
+      CREATE INDEX IF NOT EXISTS idx_documents_session_id ON documents(session_id)
     `);
-
-    const checkConstraintExists = await client.query(`
-      SELECT constraint_name 
-      FROM information_schema.table_constraints 
-      WHERE constraint_name = 'fk_document' 
-      AND table_name = 'messages'
-    `);
-
-    if (checkConstraintExists.rows.length === 0) {
-      // Only add the constraint if it doesn't exist
-      await client.query(`
-        ALTER TABLE messages 
-        ADD CONSTRAINT fk_document 
-        FOREIGN KEY (document_id) REFERENCES documents(id)
-      `);
-    }
 
     await client.query('COMMIT');
-    console.log('Migration 005: Documents table created and messages table updated');
+    console.log('Migration 005: Documents table created successfully');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Migration 005 failed:', error);
@@ -67,19 +53,11 @@ async function down() {
   try {
     await client.query('BEGIN');
 
-    // Remove foreign key constraint and columns from messages table
-    await client.query(`
-      ALTER TABLE messages
-      DROP CONSTRAINT IF EXISTS fk_document,
-      DROP COLUMN IF EXISTS file_path,
-      DROP COLUMN IF EXISTS document_id
-    `);
-
     // Drop documents table
     await client.query('DROP TABLE IF EXISTS documents');
 
     await client.query('COMMIT');
-    console.log('Migration 005: Rolled back documents table and messages table changes');
+    console.log('Migration 005: Documents table dropped successfully');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Migration 005 rollback failed:', error);

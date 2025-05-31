@@ -3,9 +3,9 @@
  * This script tests the complete flow of the runshellcommand tool
  */
 
-const ShellCommandService = require('./src/services/shellCommandService');
-const mcpDBService = require('./src/services/mcpDBService');
-const { logger } = require('./src/utils/logger');
+const ShellCommandService = require('../../services/shellCommandService');
+const mcpDBService = require('../../services/mcpDBService');
+const { logger } = require('../../utils/logger');
 
 async function testShellCommandIntegration() {
   logger.info('Starting Shell Command Integration Test');
@@ -43,12 +43,12 @@ async function testShellCommandIntegration() {
     logger.info('🔍 Testing system prompt integration...');
     try {
       // Test that the shell command system prompt is properly exported
-      const { SHELL_COMMAND_SYSTEM_PROMPT } = require('./client/src/prompts/shellCommandSystemPrompt');
+      const { SHELL_COMMAND_SYSTEM_PROMPT } = require('../../../client/src/prompts/shellCommandSystemPrompt');
       logger.info('✅ Shell command system prompt loaded successfully');
       logger.info(`System prompt length: ${SHELL_COMMAND_SYSTEM_PROMPT.length} characters`);
       
       // Test that the context utils enhancement function exists
-      const { enhancePromptWithShellCommands } = require('./client/src/utils/contextUtils');
+      const { enhancePromptWithShellCommands } = require('../../../client/src/utils/contextUtils');
       const testPrompt = 'Test base prompt';
       const enhancedPrompt = enhancePromptWithShellCommands(testPrompt);
       logger.info('✅ System prompt enhancement function working');
@@ -61,7 +61,7 @@ async function testShellCommandIntegration() {
     // Test 4: Test AI tool integration
     logger.info('🔍 Testing AI tool integration...');
     try {
-      const { aiTools, getToolByName } = require('./client/src/services/aiToolsService');
+      const { aiTools, getToolByName } = require('../../../client/src/services/aiToolsService');
       const shellTool = getToolByName('runshellcommand');
       
       if (shellTool) {

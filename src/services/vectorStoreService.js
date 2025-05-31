@@ -10,7 +10,7 @@ const { ChromaClient } = require('chromadb');
 class VectorStoreService {
   constructor(config = {}) {
     this.config = {
-      chromaUrl: 'http://localhost:8000', // URL for ChromaDB server
+      chromaUrl: 'http://172.16.16.54:8000', // URL for ChromaDB server
       collectionName: 'rag_docs',
       ...config
     };

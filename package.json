@@ -11,6 +11,10 @@
     "dev:client": "cd client && npm run build -- --watch",
     "dev:script": "node src/scripts/dev.js",
     "apply:schema": "node src/scripts/apply_chat_sessions_schema.js",
+    "install:database": "node src/scripts/install-database.js",
+    "validate:database": "node src/scripts/validate-database.js",
+    "db:migrate": "node src/scripts/migrate.js",
+    "setup:database": "node src/scripts/setup-database.js",
     "test": "jest"
   },
   "dependencies": {
