@@ -169,6 +169,59 @@ cd ..
    - Update configuration values as needed
    - All configuration is managed from the backend's config.ini file
 
+### Database Installation
+
+**For new installations on fresh devices:**
+
+```bash
+# Quick database setup (recommended)
+npm run setup:database
+
+# Verify installation
+npm run validate:database
+```
+
+This will automatically:
+- ✅ Create all required database tables
+- ✅ Set up PostgreSQL functions and triggers  
+- ✅ Create performance indexes
+- ✅ Set up the admin user
+- ✅ Initialize dashboard metrics
+- ✅ validate  tables presence
+
+**Manual database setup:**
+If you prefer manual control, the application will run migrations automatically when you start it:
+
+```bash
+npm start
+```
+
+**Configuration required:**
+Ensure your `conf/config.ini` has the database section configured:
+
+```ini
+[database]
+database-type = postgres
+database-host = localhost
+database-port = 5432
+database-user = postgres
+database-password = your_password
+database-name = your_database_name
+
+[admin]
+default_username = admin
+default_password = admin
+default_email = admin@localhost
+```
+
+**Troubleshooting database installation:**
+- Ensure PostgreSQL is running and accessible
+- Verify database credentials in config.ini
+- Check that the specified database exists
+- Ensure the database user has CREATE privileges
+
+For detailed database installation instructions, see [DATABASE_INSTALLATION.md](DATABASE_INSTALLATION.md).
+
 ### Running the Application
 
 #### Production Mode

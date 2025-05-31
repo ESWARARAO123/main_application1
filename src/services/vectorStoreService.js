@@ -6,19 +6,30 @@
 const path = require('path');
 const fs = require('fs');
 const { ChromaClient } = require('chromadb');
+const config = require('../utils/config');
 
 class VectorStoreService {
-  constructor(config = {}) {
+  constructor(overrides = {}) {
+    // Read ChromaDB configuration from config.ini
+    const dockerConfig = config.getSection('Docker');
+    const protocol = dockerConfig['docker-chromadb-protocol'] || 'http';
+    const host = dockerConfig['docker-chromadb-host'] || 'localhost';
+    const port = dockerConfig['docker-chromadb-port'] || '8000';
+    const chromaUrl = `${protocol}://${host}:${port}`;
+
     this.config = {
-      chromaUrl: 'http://localhost:8000', // URL for ChromaDB server
+      chromaUrl: chromaUrl, // URL for ChromaDB server from config
       collectionName: 'rag_docs',
-      ...config
+      ...overrides
     };
     this.client = null;
     this.collection = null;
     this.isInitialized = false;
     this.useChromaDB = true;
     this.vectorStoreDir = path.join(process.cwd(), 'DATA/vector_store'); // Fallback directory
+
+    // Log the ChromaDB configuration being used
+    console.log(`ChromaDB configuration loaded from config.ini: ${chromaUrl}`);
 
     // Create the fallback vector store directory if it doesn't exist
     if (!fs.existsSync(this.vectorStoreDir)) {
@@ -213,7 +224,7 @@ class VectorStoreService {
       // Extract options with defaults
       const limit = options.limit || 10; // Increased from 5 to 10
       const { sessionId } = options;
-      
+
       console.log(`Searching with options:`, {
         limit,
         sessionId: sessionId || 'not specified',
