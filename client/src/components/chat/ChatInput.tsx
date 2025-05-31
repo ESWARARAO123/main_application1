@@ -17,6 +17,7 @@ import FilePreview from './FilePreview';
 import './ChatInput.css';
 import { fetchChat2SqlResult } from '../../utils/chat2sqlApi'; // Added for Chat2SQL API
 import { chatbotService } from '../../services/chatbotService'; // Added for saving messages
+import { documentService } from '../../services/documentService'; // Added for document uploads
 
 interface ChatInputProps {
   onSendMessage: (message: string, file?: File, meta?: any) => void; // Modified to accept meta
@@ -34,6 +35,9 @@ interface ChatInputProps {
   onToggleMCP?: () => void;
   isChat2SqlEnabled?: boolean; // Added for Chat2SQL
   onToggleChat2Sql?: () => void; // Added for Chat2SQL
+  currentSessionId?: string; // Added to get current session ID
+  onUploadStart?: () => void; // Added for upload state management
+  onUploadComplete?: (success: boolean, documentId?: string) => void; // Added for upload completion
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -51,11 +55,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isMCPEnabled = false,
   onToggleMCP,
   isChat2SqlEnabled = false, // Added for Chat2SQL
-  onToggleChat2Sql // Added for Chat2SQL
+  onToggleChat2Sql, // Added for Chat2SQL
+  currentSessionId, // Added for session context
+  onUploadStart, // Added for upload state management
+  onUploadComplete // Added for upload completion
 }) => {
   const [input, setInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [localUploadProgress, setLocalUploadProgress] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Focus input when component mounts or loading state changes
@@ -78,94 +86,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Only proceed if there's text (file uploads use auto-upload now)
     if (input.trim() === '' || isLoading || isUploading || localLoading) return;
 
-    // Check if Chat2SQL mode is active
-    if (isChat2SqlEnabled) {
-      console.log('handleSubmit triggered, input:', input, 'activeMode:', 'chat2sql');
-      try {
-        // Show loading state
-        setLocalLoading(true);
-        
-        // Call the Chat2SQL API
-        console.log('Starting chat2sql request...');
-        
-        // First, add the user message to the chat (with special metadata to indicate it's a SQL query)
-        // This will display the user's message without triggering an AI response
-        const userMessageMeta = {
-          chat2sql: true,
-          isUserMessage: true,
-          skipAiResponse: true // Signal to parent component to not generate AI response
-        };
-        onSendMessage(input.trim(), undefined, userMessageMeta);
-        
-        // Then fetch the SQL result
-        const result = await fetchChat2SqlResult(input.trim());
-        console.log('Chat2SQL result received:', result);
-
-        // Prepare metadata for Chat2SQL message
-        const meta = {
-          chat2sql: true,
-          content: result.data, // Markdown table or "No data found."
-          columns: result.columns,
-          id: `chat2sql-${Date.now()}`,
-          timestamp: Date.now(),
-          error: null,
-          isServerResponse: true // Indicate this is the server response
-        };
-
-        // Save user message and SQL result to the database via chatbotService
-        console.log('Saving messages to database via chatbotService...');
-        try {
-          // Save the user's SQL query
-          const dbResponse = await chatbotService.sendMessage(
-            input.trim(),
-            'temp-session-id', // Will be updated in Chatbot.tsx
-            undefined,
-            false
-          );
-          console.log('Database response for user message:', dbResponse);
-
-          // Save the SQL result as a separate message
-          const resultResponse = await chatbotService.sendMessage(
-            result.data,
-            'temp-session-id', // Will be updated in Chatbot.tsx
-            undefined,
-            false
-          );
-          console.log('Database response for SQL result:', resultResponse);
-        } catch (dbError) {
-          console.warn('Failed to save message to database, but query was successful:', dbError);
-          // Continue with the UI update even if database save fails
-        }
-
-        // Call onSendMessage with meta to indicate this is a Chat2SQL response
-        console.log('Calling onSendMessage with meta...');
-        onSendMessage(result.data, undefined, meta);
-        console.log('Message sent to chat with content:', result.data);
-      } catch (error: any) {
-        console.error('Error in Chat2SQL request:', error);
-        const meta = {
-          chat2sql: true,
-          content: `Error executing SQL query: ${error.message || 'Unknown error'}`,
-          columns: [],
-          id: `chat2sql-error-${Date.now()}`,
-          timestamp: Date.now(),
-          error: error.message || 'Failed to process Chat2SQL query',
-          isServerResponse: true // Indicate this is the server response
-        };
-        onSendMessage(`Error executing SQL query: ${error.message || 'Unknown error'}`, undefined, meta);
-      } finally {
-        setLocalLoading(false);
-      }
-    } else {
-      // Proceed with normal message sending
-      onSendMessage(input.trim());
-    }
-
+    const message = input.trim();
     setInput('');
+
+    // Send the message without a file
+    onSendMessage(message);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -181,14 +108,71 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // Instead, we'll show it in the preview with an upload button
   };
 
-  const handleAutoUpload = (file: File) => {
-    // Directly trigger the upload with empty message
-    onSendMessage('', file);
-    // The file will be cleared after successful upload in the parent component
+  const handleAutoUpload = async (file: File) => {
+    try {
+      setLocalLoading(true);
+      setLocalUploadProgress(0);
+      
+      if (onUploadStart) {
+        onUploadStart();
+      }
+
+      console.log(`Starting upload for file: ${file.name}, session: ${currentSessionId || 'none'}`);
+
+      // Use the document service to upload to the correct endpoint
+      const result = await documentService.uploadDocument(
+        file,
+        currentSessionId,
+        undefined, // collectionId
+        (progress) => {
+          setLocalUploadProgress(progress);
+        }
+      );
+
+      console.log('Document upload completed:', result);
+
+      // Clear the selected file after successful upload
+      setSelectedFile(null);
+      setLocalUploadProgress(0);
+
+      // Notify parent component of successful upload
+      if (onUploadComplete) {
+        onUploadComplete(true, result.document.id);
+      }
+
+      // Send a notification message to the chat about the upload
+      const uploadMessage = `I've uploaded ${file.name} for analysis. The document is now being processed and will be available for RAG in a moment.`;
+      onSendMessage(uploadMessage, undefined, { 
+        isUploadNotification: true, 
+        documentId: result.document.id,
+        fileName: file.name 
+      });
+
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      
+      // Clear progress and notify of failure
+      setLocalUploadProgress(0);
+      
+      if (onUploadComplete) {
+        onUploadComplete(false);
+      }
+
+      // Send error message to chat
+      const errorMessage = `Failed to upload ${file.name}. Please try again.`;
+      onSendMessage(errorMessage, undefined, { 
+        isUploadNotification: true, 
+        isError: true,
+        fileName: file.name 
+      });
+    } finally {
+      setLocalLoading(false);
+    }
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
+    setLocalUploadProgress(0);
   };
 
   // Only show manual upload button if auto-upload is disabled and a file is selected
@@ -214,7 +198,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <FilePreview
             file={selectedFile}
             onRemove={handleRemoveFile}
-            uploadProgress={isUploading ? uploadProgress : undefined}
+            uploadProgress={localLoading ? localUploadProgress : undefined}
           />
 
           {showManualUploadButton && (

@@ -1,280 +1,621 @@
-/* MCP Agent Styles */
+/* =============================================================================
+   MCP Agent Modern Styling
+   Sophisticated glass morphism design with elegant animations
+   ============================================================================= */
 
-/* Command Approval */
-.mcp-command-approval {
-  background-color: var(--color-surface-light);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  animation: fadeIn 0.3s ease-in-out;
+/* Global Variables */
+:root {
+  --mcp-primary: #6366f1;
+  --mcp-primary-light: #8b5cf6;
+  --mcp-success: #10b981;
+  --mcp-warning: #f59e0b;
+  --mcp-error: #ef4444;
+  --mcp-info: #3b82f6;
+  
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-backdrop: blur(20px);
+  
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+  
+  --border-radius: 16px;
+  --border-radius-lg: 24px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.mcp-command-header {
-  display: flex;
-  justify-content: space-between;
+/* =============================================================================
+   Enhanced Keyframe Animations
+   ============================================================================= */
+
+@keyframes mcpGlow {
+  0%, 100% { 
+    box-shadow: 0 0 20px var(--mcp-primary), 0 0 40px var(--mcp-primary);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 30px var(--mcp-primary), 0 0 60px var(--mcp-primary);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes mcpPulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes mcpSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mcpSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mcpShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes mcpFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes mcpRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mcpBounce {
+  0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+  40%, 43% { transform: translateY(-30px); }
+  70% { transform: translateY(-15px); }
+  90% { transform: translateY(-4px); }
+}
+
+/* =============================================================================
+   Modern Glass Morphism Components
+   ============================================================================= */
+
+.mcp-container {
+  background: linear-gradient(135deg, var(--glass-bg), rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.mcp-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: mcpShimmer 3s infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mcp-container:hover::before {
+  opacity: 1;
+}
+
+.mcp-container:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-xl);
+}
+
+/* =============================================================================
+   Status Indicators with Enhanced Styling
+   ============================================================================= */
+
+.mcp-status {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.mcp-command-header h4 {
-  color: var(--color-text);
-  font-size: 1rem;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 600;
-  margin: 0;
+  backdrop-filter: blur(10px);
+  transition: var(--transition);
+  animation: mcpSlideUp 0.5s ease-out;
 }
 
-.mcp-command-timestamp {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+.mcp-status--connected {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #d1fae5;
 }
 
-.mcp-command-content {
-  margin-bottom: 1rem;
+.mcp-status--connecting {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #dbeafe;
+  animation: mcpPulse 2s infinite;
 }
 
-.mcp-command-description {
-  color: var(--color-text);
-  margin-bottom: 0.75rem;
+.mcp-status--error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecaca;
 }
 
-.mcp-command-details {
-  background-color: var(--color-surface);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+.mcp-status--warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fef3c7;
 }
 
-.mcp-command-tool {
-  margin-bottom: 0.5rem;
-  color: var(--color-text);
+.mcp-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: mcpPulse 2s infinite;
 }
 
-.mcp-command-parameters {
-  color: var(--color-text);
-}
+/* =============================================================================
+   Modern Button Designs
+   ============================================================================= */
 
-.mcp-command-parameters h5 {
-  font-size: 0.875rem;
+.mcp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.mcp-command-parameters pre {
-  background-color: var(--color-surface-dark);
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  overflow-x: auto;
-  font-size: 0.875rem;
-  line-height: 1.4;
-}
-
-.mcp-command-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.mcp-approve-btn {
-  background-color: var(--color-success);
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
 }
 
-.mcp-approve-btn:hover {
-  background-color: var(--color-success-dark);
-  transform: translateY(-1px);
+.mcp-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
 }
 
-.mcp-edit-btn {
-  background-color: var(--color-warning);
+.mcp-button:hover::before {
+  transform: translateX(100%);
+}
+
+.mcp-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.mcp-button:active {
+  transform: translateY(0);
+}
+
+.mcp-button--primary {
+  background: linear-gradient(135deg, var(--mcp-primary), var(--mcp-primary-light));
   color: white;
-  border: none;
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
-.mcp-edit-btn:hover {
-  background-color: var(--color-warning-dark);
-  transform: translateY(-1px);
+.mcp-button--primary:hover {
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
 
-.mcp-reject-btn {
-  background-color: var(--color-error);
+.mcp-button--success {
+  background: linear-gradient(135deg, var(--mcp-success), #059669);
   color: white;
-  border: none;
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
-.mcp-reject-btn:hover {
-  background-color: var(--color-error-dark);
-  transform: translateY(-1px);
+.mcp-button--warning {
+  background: linear-gradient(135deg, var(--mcp-warning), #d97706);
+  color: white;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
 }
 
-/* Parameter Edit Form */
-.mcp-command-parameters-edit {
-  background-color: var(--color-surface-dark);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+.mcp-button--error {
+  background: linear-gradient(135deg, var(--mcp-error), #dc2626);
+  color: white;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
 
-.mcp-parameter-edit {
-  margin-bottom: 0.5rem;
+.mcp-button--glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: white;
 }
 
-.mcp-parameter-edit label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-  color: var(--color-text);
+.mcp-button--glass:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.mcp-parameter-edit input {
+.mcp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =============================================================================
+   Enhanced Card Components
+   ============================================================================= */
+
+.mcp-card {
+  background: linear-gradient(135deg, var(--glass-bg), rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+  animation: mcpSlideUp 0.6s ease-out;
+}
+
+.mcp-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.mcp-card--success {
+  border-left: 4px solid var(--mcp-success);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+}
+
+.mcp-card--warning {
+  border-left: 4px solid var(--mcp-warning);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+}
+
+.mcp-card--error {
+  border-left: 4px solid var(--mcp-error);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+}
+
+/* =============================================================================
+   Modern Form Elements
+   ============================================================================= */
+
+.mcp-input {
   width: 100%;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-surface-light);
-  color: var(--color-text);
-  font-size: 0.875rem;
-}
-
-.mcp-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.mcp-save-btn {
-  background-color: var(--color-primary);
+  padding: 12px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
   color: white;
-  border: none;
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 14px;
+  transition: var(--transition);
 }
 
-.mcp-save-btn:hover {
-  background-color: var(--color-primary-dark);
-  transform: translateY(-1px);
+.mcp-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.mcp-cancel-btn {
-  background-color: var(--color-surface-dark);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.mcp-input:focus {
+  outline: none;
+  border-color: var(--mcp-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  transform: scale(1.02);
 }
 
-.mcp-cancel-btn:hover {
-  background-color: var(--color-surface);
-  transform: translateY(-1px);
+.mcp-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
 }
 
-/* Command Result */
-.mcp-command-result {
-  background-color: var(--color-surface-light);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  animation: fadeIn 0.3s ease-in-out;
-}
+/* =============================================================================
+   Loading and Progress Indicators
+   ============================================================================= */
 
-.mcp-command-result.success {
-  border-left: 4px solid var(--color-success);
-}
-
-.mcp-command-result.error {
-  border-left: 4px solid var(--color-error);
-}
-
-.mcp-result-header {
-  display: flex;
-  justify-content: space-between;
+.mcp-loading {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 0.75rem;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
 }
 
-.mcp-result-header h4 {
-  color: var(--color-text);
-  font-size: 1rem;
+.mcp-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid var(--mcp-primary);
+  border-radius: 50%;
+  animation: mcpRotate 1s linear infinite;
+}
+
+.mcp-progress {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mcp-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mcp-primary), var(--mcp-primary-light));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.mcp-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: mcpShimmer 2s infinite;
+}
+
+/* =============================================================================
+   Enhanced Typography
+   ============================================================================= */
+
+.mcp-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, white, rgba(255, 255, 255, 0.8));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mcp-subtitle {
+  font-size: 18px;
   font-weight: 600;
-  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 12px;
 }
 
-.mcp-result-timestamp {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+.mcp-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
 }
 
-.mcp-result-content {
-  margin-bottom: 1rem;
+.mcp-text--muted {
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.mcp-result-success {
-  color: var(--color-text);
+.mcp-text--success {
+  color: #d1fae5;
 }
 
-.mcp-result-error {
-  color: var(--color-error);
+.mcp-text--warning {
+  color: #fef3c7;
 }
 
-.mcp-result-actions {
+.mcp-text--error {
+  color: #fecaca;
+}
+
+/* =============================================================================
+   Modern Layout Utilities
+   ============================================================================= */
+
+.mcp-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.mcp-grid--2 {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.mcp-flex {
   display: flex;
-  justify-content: flex-end;
 }
 
-.mcp-clear-btn {
-  background-color: var(--color-surface-dark);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 0.25rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.mcp-flex--center {
+  align-items: center;
+  justify-content: center;
 }
 
-.mcp-clear-btn:hover {
-  background-color: var(--color-surface);
-  transform: translateY(-1px);
+.mcp-flex--between {
+  justify-content: space-between;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.mcp-flex--gap {
+  gap: 16px;
 }
 
-@keyframes slideIn {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.mcp-space-y > * + * {
+  margin-top: 16px;
+}
+
+/* =============================================================================
+   Enhanced Scrollbars
+   ============================================================================= */
+
+.mcp-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mcp-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.mcp-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--mcp-primary), var(--mcp-primary-light));
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.mcp-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--mcp-primary-light), var(--mcp-primary));
+}
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .mcp-container {
+    margin: 16px;
+    border-radius: var(--border-radius);
+  }
+  
+  .mcp-card {
+    padding: 16px;
+  }
+  
+  .mcp-button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+  
+  .mcp-title {
+    font-size: 20px;
+  }
+  
+  .mcp-subtitle {
+    font-size: 16px;
+  }
+  
+  .mcp-grid--2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .mcp-container {
+    margin: 8px;
+    border-radius: 12px;
+  }
+  
+  .mcp-card {
+    padding: 12px;
+  }
+  
+  .mcp-button {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  
+  .mcp-flex--between {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* =============================================================================
+   Animation Utilities
+   ============================================================================= */
+
+.mcp-animate-glow {
+  animation: mcpGlow 2s infinite;
+}
+
+.mcp-animate-pulse {
+  animation: mcpPulse 2s infinite;
+}
+
+.mcp-animate-float {
+  animation: mcpFloat 3s ease-in-out infinite;
+}
+
+.mcp-animate-bounce {
+  animation: mcpBounce 2s infinite;
+}
+
+.mcp-animate-slide-up {
+  animation: mcpSlideUp 0.6s ease-out;
+}
+
+.mcp-animate-slide-in {
+  animation: mcpSlideIn 0.6s ease-out;
+}
+
+/* =============================================================================
+   Accessibility Enhancements
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.mcp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================================
+   Focus Styles for Better Accessibility
+   ============================================================================= */
+
+.mcp-button:focus-visible,
+.mcp-input:focus-visible {
+  outline: 2px solid var(--mcp-primary);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   High Contrast Mode Support
+   ============================================================================= */
+
+@media (prefers-contrast: high) {
+  .mcp-container {
+    border: 2px solid white;
+  }
+  
+  .mcp-button {
+    border: 2px solid currentColor;
+  }
+  
+  .mcp-status {
+    border: 2px solid currentColor;
+  }
 }

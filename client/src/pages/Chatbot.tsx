@@ -17,7 +17,8 @@ import ModelSelector from '../components/chat/ModelSelector';
 import MCPServerSelector from '../components/chat/MCPServerSelector';
 import ContextReadingIndicator from '../components/chat/ContextReadingIndicator';
 import MCPNotifications from '../components/mcp/MCPNotifications';
-import { useMCPChat } from '../components/mcp/MCPChatComponents';
+import { useMCP } from '../contexts/MCPContext';
+import { useMCPAgent } from '../contexts/MCPAgentContext';
 import { useChatSessions } from '../hooks/useChatSessions';
 import { useChatMessaging } from '../hooks/useChatMessaging';
 import { useContextHandling } from '../hooks/useContextHandling';
@@ -89,17 +90,69 @@ const Chatbot: React.FC = () => {
     return localStorage.getItem('selectedModelId') || undefined;
   });
 
-  // Get MCP chat functionality from our custom hook
-  const {
-    isMCPConnected,
-    isMCPEnabled,
-    toggleMCPEnabled,
-    showServerSelector,
-    setShowServerSelector,
-    selectServer,
-    createContextToolMessage,
-    handleMCPChatMessage
-  } = useMCPChat();
+  // Get MCP functionality from the actual contexts
+  const { isConnected: isMCPConnected, defaultServer, connectToServer } = useMCP();
+  const { isAgentEnabled: isMCPEnabled, toggleAgent: toggleMCPEnabled } = useMCPAgent();
+  
+  // MCP Server selector state
+  const [showServerSelector, setShowServerSelector] = useState(false);
+
+  // Enhanced MCP helper functions
+  const selectServer = async (serverId: string) => {
+    console.log('Selected MCP server:', serverId);
+    
+    try {
+      // The MCPServerSelector component handles the actual connection
+      // We just need to wait a moment for the connection to establish
+      // and then enable the agent and close the dialog
+      
+      // Wait for connection establishment (3 seconds should be enough)
+      setTimeout(() => {
+        // Enable the MCP agent if not already enabled
+        if (!isMCPEnabled) {
+          toggleMCPEnabled();
+        }
+        
+        // Close the server selector
+        setShowServerSelector(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error in server selection:', error);
+      // Keep dialog open if there's an error
+    }
+  };
+
+  const createContextToolMessage = () => {
+    const contextMessage: ExtendedChatMessage = {
+      id: `context-tool-${Date.now()}`,
+      role: 'assistant',
+      content: '🔍 Reading context from uploaded documents...',
+      timestamp: new Date(),
+      isContextMessage: true
+    };
+    return contextMessage;
+  };
+
+  const handleMCPChatMessage = async (
+    content: string,
+    messages: ExtendedChatMessage[],
+    activeSessionId: string | null,
+    selectedModel: { id?: string },
+    streamedContentRef: React.MutableRefObject<{ [key: string]: string }>,
+    abortFunctionRef: React.MutableRefObject<(() => void) | null>,
+    setMessages: React.Dispatch<React.SetStateAction<ExtendedChatMessage[]>>,
+    setIsStreaming: React.Dispatch<React.SetStateAction<boolean>>,
+    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
+    executeTool: any,
+    chatbotService: any,
+    fetchSessions: () => void
+  ) => {
+    console.log('MCP Chat message handling:', content);
+    // For now, fall back to regular chat handling
+    // This can be enhanced when MCP Agent context provides chat functionality
+    throw new Error('MCP chat functionality not yet implemented');
+  };
 
   // Tool execution state
   const { isExecutingTool, currentTool, executeTool } = useToolExecution();
@@ -470,7 +523,13 @@ const Chatbot: React.FC = () => {
 
   // Toggle MCP mode
   const handleToggleMCP = () => {
-    toggleMCPEnabled();
+    if (!isMCPEnabled && !isMCPConnected) {
+      // If MCP is not enabled and not connected, show server selector first
+      setShowServerSelector(true);
+    } else {
+      // If already enabled/connected, just toggle the agent
+      toggleMCPEnabled();
+    }
   };
 
   const isEmpty = messages.length === 0;
@@ -584,6 +643,7 @@ const Chatbot: React.FC = () => {
           {isMCPEnabled && (
             <MCPNotifications />
           )}
+          
           <ModelSelector
             onSelectModel={setSelectedModelId}
             selectedModelId={selectedModelId}
