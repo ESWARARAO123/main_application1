@@ -1,0 +1,59 @@
+## MCP Server Testing Commands
+## Copy and paste these commands into your terminal to test MCP server endpoints
+
+## Base URL
+# MCP_URL="http://172.16.16.54:8080"
+
+## 1. Get Server Info
+curl -X GET "http://172.16.16.54:8080/info"
+
+## 2. Get Available Tools
+curl -X GET "http://172.16.16.54:8080/tools"
+
+## 3. Connect to SSE Endpoint (will establish a persistent connection)
+curl -N "http://172.16.16.54:8080/sse"
+
+## 4. Test readDirectory without clientId
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"tool":"readDirectory","parameters":{}}'
+
+## 5. Test readDirectory with a dummy clientId
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","tool":"readDirectory","parameters":{}}'
+
+## 6. Test readDirectory with invoke format
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","type":"invoke","invoke":{"name":"readDirectory","parameters":{}}}'
+
+## 7. Test createFile operation
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","tool":"createFile","parameters":{"filePath":"test-file.txt","content":"Hello from MCP test!"}}'
+
+## 8. Test readFile operation
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","tool":"readFile","parameters":{"filePath":"test-file.txt"}}'
+
+## 9. Test runShellCommand operation
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","tool":"runShellCommand","parameters":{"command":"ls -la"}}'
+
+## 10. Test natural language message
+curl -X POST "http://172.16.16.54:8080/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","message":"list all files in the current directory"}'
+
+## 11. Test session creation (if it exists)
+curl -X POST "http://172.16.16.54:8080/session" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"create_session"}'
+
+## NOTE: Replace "test-client-id" with the actual clientId from the SSE connection
+## To get a real clientId, run the SSE connection command (#3) in a separate terminal
+## Look for the response with {"type":"connected","clientId":"XXXX"}
+## Then use that clientId in the subsequent commands 

@@ -1,0 +1,51 @@
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Add some spacing and styling for the buttons */
+.hide-scrollbar button {
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.hide-scrollbar button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix for input area to prevent overlap with chat messages */
+.input-area-blur {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(var(--color-bg-rgb), 0.85);
+  z-index: 10;
+  padding-bottom: 20px !important;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Add extra padding to the bottom of the message list to prevent overlap */
+.message-list-container {
+  padding-bottom: 180px !important;
+}
+
+/* Improve the empty state styling */
+.chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 200px; /* Add extra space at the bottom */
+}
+
+/* Ensure the input doesn't overlap with content */
+.chat-input-wrapper {
+  position: relative;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}

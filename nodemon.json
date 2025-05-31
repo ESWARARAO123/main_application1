@@ -1,0 +1,13 @@
+{
+  "ignore": [
+    "DATA/documents/*",
+    "DATA/embeddings/*",
+    "DATA/chroma_data/*",
+    "DATA/vector_store/*"
+  ],
+  "watch": [
+    "src/",
+    "client/src/"
+  ],
+  "ext": "js,json,jsx,ts,tsx"
+}

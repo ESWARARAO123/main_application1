@@ -1,0 +1,280 @@
+/* MCP Agent Styles */
+
+/* Command Approval */
+.mcp-command-approval {
+  background-color: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.mcp-command-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.mcp-command-header h4 {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mcp-command-timestamp {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.mcp-command-content {
+  margin-bottom: 1rem;
+}
+
+.mcp-command-description {
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.mcp-command-details {
+  background-color: var(--color-surface);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.mcp-command-tool {
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.mcp-command-parameters {
+  color: var(--color-text);
+}
+
+.mcp-command-parameters h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.mcp-command-parameters pre {
+  background-color: var(--color-surface-dark);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.mcp-command-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.mcp-approve-btn {
+  background-color: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-approve-btn:hover {
+  background-color: var(--color-success-dark);
+  transform: translateY(-1px);
+}
+
+.mcp-edit-btn {
+  background-color: var(--color-warning);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-edit-btn:hover {
+  background-color: var(--color-warning-dark);
+  transform: translateY(-1px);
+}
+
+.mcp-reject-btn {
+  background-color: var(--color-error);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-reject-btn:hover {
+  background-color: var(--color-error-dark);
+  transform: translateY(-1px);
+}
+
+/* Parameter Edit Form */
+.mcp-command-parameters-edit {
+  background-color: var(--color-surface-dark);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.mcp-parameter-edit {
+  margin-bottom: 0.5rem;
+}
+
+.mcp-parameter-edit label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: var(--color-text);
+}
+
+.mcp-parameter-edit input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-light);
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.mcp-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mcp-save-btn {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-save-btn:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.mcp-cancel-btn {
+  background-color: var(--color-surface-dark);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-cancel-btn:hover {
+  background-color: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+/* Command Result */
+.mcp-command-result {
+  background-color: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.mcp-command-result.success {
+  border-left: 4px solid var(--color-success);
+}
+
+.mcp-command-result.error {
+  border-left: 4px solid var(--color-error);
+}
+
+.mcp-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.mcp-result-header h4 {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mcp-result-timestamp {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.mcp-result-content {
+  margin-bottom: 1rem;
+}
+
+.mcp-result-success {
+  color: var(--color-text);
+}
+
+.mcp-result-error {
+  color: var(--color-error);
+}
+
+.mcp-result-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mcp-clear-btn {
+  background-color: var(--color-surface-dark);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mcp-clear-btn:hover {
+  background-color: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

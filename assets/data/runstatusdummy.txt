@@ -1,0 +1,844 @@
+import React, { useState, useEffect } from 'react';
+// @ts-nocheck
+import { useAuth } from '../contexts/AuthContext';
+import {
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
+  PauseIcon,
+  TableCellsIcon,
+  ChartPieIcon,
+  DocumentTextIcon,
+  UserIcon
+} from '@heroicons/react/24/outline';
+// We're using mock data directly in this file, so we don't need these services
+// import runService from '../services/runService';
+// import userService from '../services/userService';
+
+// Types for our run data
+interface RunStep {
+  id: string;
+  name: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'warning' | 'paused';
+  startTime?: Date;
+  endTime?: Date;
+  logs?: string[];
+  errorMessage?: string;
+}
+
+interface Run {
+  id: string;
+  name: string;
+  userId: number;
+  username: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused';
+  progress: number;
+  startTime: Date;
+  endTime?: Date;
+  steps: RunStep[];
+  description?: string;
+  type: string;
+}
+
+// Add user type
+interface User {
+  id: number;
+  username: string;
+  name: string;
+  role: string;
+}
+
+export default function RunStatusDummy() {
+  const { isAdmin } = useAuth(); // We only need isAdmin for this demo
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [selectedRunType, setSelectedRunType] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'flow' | 'waffle'>('list');
+
+  // Set mock users for demo
+  useEffect(() => {
+    // For demo purposes, always set mock users
+    setUsers([
+      { id: 1, username: 'admin', name: 'Administrator', role: 'admin' },
+      { id: 2, username: 'yaswanth', name: 'yaswanth ampolu', role: 'user' },
+      { id: 3, username: 'Eswar', name: 'Eswar', role: 'user' }
+    ]);
+  }, []);
+
+  // Create mock data directly in this component for demo purposes
+  const mockRuns: Run[] = [
+    // ===== PHYSICAL DESIGN RUNS =====
+    {
+      id: '1',
+      name: 'BigEndian CPU Core 28nm',
+      userId: 1,
+      username: 'admin',
+      status: 'completed',
+      progress: 100,
+      startTime: new Date(Date.now() - 3600000 * 24 * 3),
+      endTime: new Date(Date.now() - 3600000 * 24),
+      type: 'PD',
+      description: 'BigEndian CPU core implementation in 28nm technology',
+      steps: [
+        {
+          id: 's1',
+          name: 'RTL Design',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 24 * 3),
+          endTime: new Date(Date.now() - 3600000 * 24 * 2.8),
+        },
+        {
+          id: 's2',
+          name: 'Synthesis',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 24 * 2.8),
+          endTime: new Date(Date.now() - 3600000 * 24 * 2.5),
+        },
+        {
+          id: 's3',
+          name: 'Floorplan',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 24 * 2.5),
+          endTime: new Date(Date.now() - 3600000 * 24 * 2.3),
+        },
+        {
+          id: 's4',
+          name: 'Placement',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 24 * 2.3),
+          endTime: new Date(Date.now() - 3600000 * 24 * 2),
+        },
+        {
+          id: 's5',
+          name: 'Clock Tree Synthesis',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 24 * 2),
+          endTime: new Date(Date.now() - 3600000 * 24 * 1.8),
+        }
+      ]
+    },
+    {
+      id: '2',
+      name: 'Aurdaine Memory Controller 2nm',
+      userId: 1,
+      username: 'admin',
+      status: 'running',
+      progress: 65,
+      startTime: new Date(Date.now() - 3600000 * 12),
+      type: 'PD',
+      description: 'Aurdaine memory controller implementation in 2nm technology',
+      steps: [
+        {
+          id: 's1',
+          name: 'RTL Design',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 12),
+          endTime: new Date(Date.now() - 3600000 * 10),
+        },
+        {
+          id: 's2',
+          name: 'Synthesis',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 10),
+          endTime: new Date(Date.now() - 3600000 * 8),
+        },
+        {
+          id: 's3',
+          name: 'Floorplan',
+          status: 'running',
+          startTime: new Date(Date.now() - 3600000 * 8),
+        }
+      ]
+    },
+    {
+      id: '3',
+      name: 'BigEndian I/O Controller 28nm',
+      userId: 2,
+      username: 'yaswanth',
+      status: 'failed',
+      progress: 33,
+      startTime: new Date(Date.now() - 3600000 * 48),
+      endTime: new Date(Date.now() - 3600000 * 36),
+      type: 'PD',
+      description: 'BigEndian I/O controller implementation in 28nm technology',
+      steps: [
+        {
+          id: 's1',
+          name: 'RTL Design',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 48),
+          endTime: new Date(Date.now() - 3600000 * 46),
+        },
+        {
+          id: 's2',
+          name: 'Synthesis',
+          status: 'failed',
+          startTime: new Date(Date.now() - 3600000 * 46),
+          endTime: new Date(Date.now() - 3600000 * 36),
+          errorMessage: 'License server unavailable'
+        }
+      ]
+    },
+    {
+      id: '4',
+      name: 'Aurdaine GPU Core 2nm',
+      userId: 3,
+      username: 'Eswar',
+      status: 'paused',
+      progress: 75,
+      startTime: new Date(Date.now() - 3600000 * 72),
+      type: 'PD',
+      description: 'Aurdaine GPU core implementation in 2nm technology',
+      steps: [
+        {
+          id: 's1',
+          name: 'RTL Design',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 72),
+          endTime: new Date(Date.now() - 3600000 * 70),
+        },
+        {
+          id: 's2',
+          name: 'Synthesis',
+          status: 'completed',
+          startTime: new Date(Date.now() - 3600000 * 70),
+          endTime: new Date(Date.now() - 3600000 * 68),
+        },
+        {
+          id: 's3',
+          name: 'Floorplan',
+          status: 'paused',
+          startTime: new Date(Date.now() - 3600000 * 68),
+        }
+      ]
+    }
+  ];
+
+  // Fetch runs data
+  useEffect(() => {
+    const fetchRuns = async () => {
+      setLoading(true);
+      try {
+        // For demo purposes, directly use the mock data
+        let fetchedRuns: Run[] = [...mockRuns]; // Use the mock data defined above
+
+        if (selectedUserId) {
+          // Filter runs by selected user
+          fetchedRuns = mockRuns.filter(run => run.userId === selectedUserId);
+          const selectedUserData = users.find(u => u.id === selectedUserId) || null;
+          setSelectedUser(selectedUserData);
+        } else {
+          setSelectedUser(null);
+        }
+
+        setRuns(fetchedRuns);
+      } catch (error) {
+        console.error('Error processing runs:', error);
+        setRuns(mockRuns); // Always fall back to mock data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRuns();
+  }, [selectedUserId, users]);
+
+  // Filter runs based on selected filters and search term
+  const filteredRuns = runs.filter(run => {
+    const matchesType = selectedRunType ? run.type === selectedRunType : true;
+    const matchesStatus = selectedStatus ? run.status === selectedStatus : true;
+    const matchesSearch = searchTerm
+      ? run.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        run.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        run.username.toLowerCase().includes(searchTerm.toLowerCase())
+      : true;
+
+    return matchesType && matchesStatus && matchesSearch;
+  });
+
+  const toggleRunExpansion = (runId: string) => {
+    setExpandedRun(expandedRun === runId ? null : runId);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircleIcon className="w-5 h-5" style={{ color: 'var(--color-success)' }} />;
+      case 'running':
+        return <ArrowPathIcon className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary)' }} />;
+      case 'failed':
+        return <XCircleIcon className="w-5 h-5" style={{ color: 'var(--color-error)' }} />;
+      case 'warning':
+        return <ExclamationTriangleIcon className="w-5 h-5" style={{ color: 'var(--color-warning)' }} />;
+      case 'paused':
+        return <PauseIcon className="w-5 h-5" style={{ color: 'var(--color-warning)' }} />;
+      default:
+        return <ClockIcon className="w-5 h-5" style={{ color: 'var(--color-text-muted)' }} />;
+    }
+  };
+
+  const formatDate = (date?: Date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString();
+  };
+
+  const calculateDuration = (start?: Date, end?: Date) => {
+    if (!start) return 'N/A';
+    const startTime = new Date(start);
+    const endTime = end ? new Date(end) : new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((durationMs % (1000 * 60)) / 1000);
+
+    return `${hours > 0 ? hours + 'h ' : ''}${minutes}m ${seconds}s`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="p-6 rounded-xl shadow-card" style={{
+        background: 'linear-gradient(to right, var(--color-primary-dark)20, var(--color-secondary-dark)20)'
+      }}>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+          {selectedUser ? `${selectedUser.name}'s Run Status` : 'Physical Design Run Status'}
+        </h2>
+        <p style={{ color: 'var(--color-text-secondary)' }}>
+          {isAdmin()
+            ? selectedUser
+              ? `Viewing run status for ${selectedUser.name}`
+              : 'Monitor and manage IC design runs across the platform'
+            : 'Track the status of your IC design runs'}
+        </p>
+      </div>
+
+      {/* User selection for admins */}
+      {isAdmin() && users.length > 0 && (
+        <div className="p-4 rounded-xl shadow-card border" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>Select User</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div
+              onClick={() => setSelectedUserId(null)}
+              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                selectedUserId === null
+                  ? 'border-primary-theme bg-platform-primary/10'
+                  : 'hover:bg-platform-surface-light'
+              }`}
+              style={{
+                borderColor: selectedUserId === null ? 'var(--color-primary)' : 'var(--color-border)',
+                backgroundColor: selectedUserId === null ? 'var(--color-primary)10' : 'var(--color-surface)',
+              }}
+            >
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{
+                  backgroundColor: 'var(--color-primary)20',
+                  color: 'var(--color-primary)'
+                }}>
+                  <UserIcon className="w-4 h-4" />
+                </div>
+                <div className="ml-3">
+                  <div className="font-medium" style={{ color: 'var(--color-text)' }}>All Users</div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>View runs from all users</div>
+                </div>
+              </div>
+            </div>
+
+            {users.map(u => (
+              <div
+                key={u.id}
+                onClick={() => setSelectedUserId(u.id)}
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  selectedUserId === u.id
+                    ? 'border-primary-theme bg-platform-primary/10'
+                    : 'hover:bg-platform-surface-light'
+                }`}
+                style={{
+                  borderColor: selectedUserId === u.id ? 'var(--color-primary)' : 'var(--color-border)',
+                  backgroundColor: selectedUserId === u.id ? 'var(--color-primary)10' : 'var(--color-surface)',
+                }}
+              >
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-semibold" style={{
+                    backgroundColor: 'var(--color-primary)20',
+                    color: 'var(--color-primary)'
+                  }}>
+                    {u.name ? u.name.charAt(0).toUpperCase() : u.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-medium" style={{ color: 'var(--color-text)' }}>{u.name || u.username}</div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{u.username}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters and view toggle */}
+      <div className="p-4 rounded-xl shadow-card border" style={{
+        backgroundColor: 'var(--color-surface)',
+        borderColor: 'var(--color-border)'
+      }}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+            {selectedUser ? `Runs for ${selectedUser.name}` : 'All Runs'}
+          </h3>
+
+          <div className="flex space-x-2 mt-2 md:mt-0">
+            <button
+              onClick={() => setViewMode('list')}
+              className="flex items-center px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                backgroundColor: viewMode === 'list' ? 'var(--color-primary)' : 'var(--color-surface-dark)',
+                color: viewMode === 'list' ? 'white' : 'var(--color-text-muted)'
+              }}
+            >
+              <TableCellsIcon className="w-4 h-4 mr-2" />
+              List View
+            </button>
+            <button
+              onClick={() => setViewMode('flow')}
+              className="flex items-center px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                backgroundColor: viewMode === 'flow' ? 'var(--color-primary)' : 'var(--color-surface-dark)',
+                color: viewMode === 'flow' ? 'white' : 'var(--color-text-muted)'
+              }}
+            >
+              <ChartPieIcon className="w-4 h-4 mr-2" />
+              Flow View
+            </button>
+            <button
+              onClick={() => setViewMode('waffle')}
+              className="flex items-center px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                backgroundColor: viewMode === 'waffle' ? 'var(--color-primary)' : 'var(--color-surface-dark)',
+                color: viewMode === 'waffle' ? 'white' : 'var(--color-text-muted)'
+              }}
+            >
+              <DocumentTextIcon className="w-4 h-4 mr-2" />
+              Waffle View
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label htmlFor="search" className="block text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>Search</label>
+            <input
+              id="search"
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search runs..."
+              className="w-full rounded-lg px-3 py-2"
+              style={{
+                backgroundColor: 'var(--color-surface-dark)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+                border: '1px solid var(--color-border)'
+              }}
+            />
+          </div>
+          <div>
+            <label htmlFor="type" className="block text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>Run Type</label>
+            <select
+              id="type"
+              value={selectedRunType || ''}
+              onChange={(e) => setSelectedRunType(e.target.value || null)}
+              className="w-full rounded-lg px-3 py-2"
+              style={{
+                backgroundColor: 'var(--color-surface-dark)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <option value="">All Types</option>
+              <option value="PD">Physical Design</option>
+              <option value="Report">Report</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="status" className="block text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>Status</label>
+            <select
+              id="status"
+              value={selectedStatus || ''}
+              onChange={(e) => setSelectedStatus(e.target.value || null)}
+              className="w-full rounded-lg px-3 py-2"
+              style={{
+                backgroundColor: 'var(--color-surface-dark)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSelectedRunType(null);
+                setSelectedStatus(null);
+                setSearchTerm('');
+              }}
+              className="px-4 py-2 rounded-lg transition-colors hover:bg-opacity-10 hover:bg-gray-500"
+              style={{
+                backgroundColor: 'var(--color-surface-dark)',
+                color: 'var(--color-text)'
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Run list */}
+      {loading ? (
+        <div className="p-8 rounded-xl shadow-card border flex items-center justify-center" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full animate-spin" style={{
+              borderWidth: '4px',
+              borderStyle: 'solid',
+              borderColor: 'var(--color-primary)30',
+              borderTopColor: 'var(--color-primary)'
+            }}></div>
+            <p className="mt-4" style={{ color: 'var(--color-text)' }}>Loading runs...</p>
+          </div>
+        </div>
+      ) : filteredRuns.length === 0 ? (
+        <div className="p-8 rounded-xl shadow-card border text-center" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text-muted)'
+        }}>
+          <p>No runs found. The run feature will be available soon.</p>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="p-4 rounded-xl shadow-card border" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ color: 'var(--color-text)' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <th className="px-4 py-3 text-left">Name</th>
+                  <th className="px-4 py-3 text-left">Type</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Progress</th>
+                  <th className="px-4 py-3 text-left">Start Time</th>
+                  <th className="px-4 py-3 text-left">Duration</th>
+                  <th className="px-4 py-3 text-left">User</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRuns.map(run => (
+                  <React.Fragment key={run.id}>
+                    <tr
+                      className="cursor-pointer hover:bg-opacity-10 hover:bg-gray-500 transition-colors"
+                      onClick={() => toggleRunExpansion(run.id)}
+                      style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{run.name}</div>
+                        {run.description && (
+                          <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{run.description}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                          backgroundColor: 'var(--color-primary)20',
+                          color: 'var(--color-primary)'
+                        }}>
+                          {run.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          {getStatusIcon(run.status)}
+                          <span className="ml-2 capitalize">{run.status}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 max-w-[150px]" style={{
+                          backgroundColor: 'var(--color-surface-dark)'
+                        }}>
+                          <div className="h-2.5 rounded-full" style={{
+                            width: `${run.progress}%`,
+                            backgroundColor: run.status === 'failed'
+                              ? 'var(--color-error)'
+                              : run.status === 'paused'
+                                ? 'var(--color-warning)'
+                                : 'var(--color-primary)'
+                          }}></div>
+                        </div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                          {run.progress}%
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {formatDate(run.startTime)}
+                      </td>
+                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {calculateDuration(run.startTime, run.endTime)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{
+                            backgroundColor: 'var(--color-primary)20',
+                            color: 'var(--color-primary)'
+                          }}>
+                            {run.username.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="ml-2">{run.username}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          className="p-1.5 rounded-lg transition-colors hover:bg-opacity-10 hover:bg-gray-500"
+                          style={{ color: 'var(--color-primary)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRunExpansion(run.id);
+                          }}
+                        >
+                          {expandedRun === run.id ? 'Hide Details' : 'View Details'}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedRun === run.id && (
+                      <tr style={{ backgroundColor: 'var(--color-surface-dark)10' }}>
+                        <td colSpan={8} className="px-4 py-3">
+                          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-surface-dark)' }}>
+                            <h4 className="font-medium mb-2">Steps</h4>
+                            <div className="space-y-2">
+                              {run.steps.map(step => (
+                                <div
+                                  key={step.id}
+                                  className="p-2 rounded-lg flex items-center justify-between"
+                                  style={{
+                                    backgroundColor: 'var(--color-surface)',
+                                    border: '1px solid var(--color-border)'
+                                  }}
+                                >
+                                  <div className="flex items-center">
+                                    {getStatusIcon(step.status)}
+                                    <span className="ml-2">{step.name}</span>
+                                  </div>
+                                  <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                    {step.startTime ? calculateDuration(step.startTime, step.endTime) : 'Not started'}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : viewMode === 'flow' ? (
+        <div className="p-8 rounded-xl shadow-card border" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredRuns.map(run => (
+              <div
+                key={run.id}
+                className="p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all"
+                style={{
+                  backgroundColor: 'var(--color-surface-dark)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text)'
+                }}
+                onClick={() => toggleRunExpansion(run.id)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-medium">{run.name}</h3>
+                    <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                      {run.description || `${run.type} run`}
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                    backgroundColor: 'var(--color-primary)20',
+                    color: 'var(--color-primary)'
+                  }}>
+                    {run.type}
+                  </span>
+                </div>
+
+                <div className="mb-3">
+                  <div className="flex items-center mb-1">
+                    {getStatusIcon(run.status)}
+                    <span className="ml-2 capitalize">{run.status}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700" style={{
+                    backgroundColor: 'var(--color-surface)'
+                  }}>
+                    <div className="h-2.5 rounded-full" style={{
+                      width: `${run.progress}%`,
+                      backgroundColor: run.status === 'failed'
+                        ? 'var(--color-error)'
+                        : run.status === 'paused'
+                          ? 'var(--color-warning)'
+                          : 'var(--color-primary)'
+                    }}></div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  <div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Started</div>
+                    <div>{formatDate(run.startTime)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Duration</div>
+                    <div>{calculateDuration(run.startTime, run.endTime)}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{
+                      backgroundColor: 'var(--color-primary)20',
+                      color: 'var(--color-primary)'
+                    }}>
+                      {run.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="ml-2 text-sm">{run.username}</span>
+                  </div>
+
+                  <button
+                    className="text-xs px-2 py-1 rounded transition-colors"
+                    style={{
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-primary)'
+                    }}
+                  >
+                    {expandedRun === run.id ? 'Hide Steps' : 'View Steps'}
+                  </button>
+                </div>
+
+                {expandedRun === run.id && (
+                  <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+                    <h4 className="text-sm font-medium mb-2">Steps</h4>
+                    <div className="space-y-2">
+                      {run.steps.map(step => (
+                        <div
+                          key={step.id}
+                          className="p-2 rounded-lg flex items-center justify-between text-sm"
+                          style={{
+                            backgroundColor: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)'
+                          }}
+                        >
+                          <div className="flex items-center">
+                            {getStatusIcon(step.status)}
+                            <span className="ml-2">{step.name}</span>
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {step.startTime ? calculateDuration(step.startTime, step.endTime) : 'Not started'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="p-8 rounded-xl shadow-card border" style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {filteredRuns.map(run => (
+              <div
+                key={run.id}
+                className="p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all"
+                style={{
+                  backgroundColor: 'var(--color-surface-dark)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text)'
+                }}
+                onClick={() => toggleRunExpansion(run.id)}
+              >
+                <div className="flex flex-col h-full">
+                  <div className="mb-2">
+                    <div className="flex justify-between items-start">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                        backgroundColor: 'var(--color-primary)20',
+                        color: 'var(--color-primary)'
+                      }}>
+                        {run.type}
+                      </span>
+                      <div className="flex items-center">
+                        {getStatusIcon(run.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 className="font-medium mb-1 line-clamp-2">{run.name}</h3>
+                  <div className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
+                    {run.description || `${run.type} run`}
+                  </div>
+
+                  <div className="mt-auto">
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2" style={{
+                      backgroundColor: 'var(--color-surface)'
+                    }}>
+                      <div className="h-2 rounded-full" style={{
+                        width: `${run.progress}%`,
+                        backgroundColor: run.status === 'failed'
+                          ? 'var(--color-error)'
+                          : run.status === 'paused'
+                            ? 'var(--color-warning)'
+                            : 'var(--color-primary)'
+                      }}></div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      <div>{run.progress}%</div>
+                      <div>{calculateDuration(run.startTime, run.endTime)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-platform-darker text-platform-light antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-platform-primary hover:bg-platform-primary/90 text-white font-medium py-2.5 px-4 rounded-lg
+           transition-all duration-200 focus:ring-2 focus:ring-platform-primary/20 focus:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-platform-surface hover:bg-platform-surface-light text-platform-light font-medium py-2.5 px-4 rounded-lg
+           transition-all duration-200 focus:ring-2 focus:ring-platform-primary/20 focus:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply bg-platform-surface border border-platform-border rounded-lg px-4 py-2.5 w-full
+           text-platform-light placeholder-platform-muted
+           focus:outline-none focus:ring-2 focus:ring-platform-primary/20 focus:border-platform-primary
+           transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-platform-dark border border-platform-border rounded-xl p-6
+           shadow-lg shadow-platform-darker/5;
+  }
+
+  .badge {
+    @apply px-2.5 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-platform-primary/10 text-platform-primary;
+  }
+
+  .badge-secondary {
+    @apply bg-platform-secondary/10 text-platform-secondary;
+  }
+
+  /* Context tool button styles */
+  .context-button-complete {
+    background-color: var(--color-success) !important;
+  }
+
+  /* Ensure the button state is visible even before JS fully initializes */
+  [data-context-button-state="complete"] {
+    background-color: var(--color-success) !important;
+    cursor: default !important;
+    pointer-events: none;
+  }
+}

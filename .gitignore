@@ -1,0 +1,27 @@
+node_modules
+client/node_modules
+.env
+client/.env
+.DS_Store
+
+# DATA directory and its contents
+/DATA/*
+# But keep the DATA directory itself and README
+!/DATA/.gitkeep
+!/DATA/README.md
+
+# Explicitly ignore these specific subdirectories
+/DATA/documents/
+/DATA/embeddings/
+/DATA/chroma_data/
+/DATA/vector_store/
+
+logs/
+logs/combined.log
+logs/error.log
+
+node_modules/
+client/node_modules/
+
+python/venv/
+python/.venv
