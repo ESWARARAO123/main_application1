@@ -9,9 +9,12 @@ async function up() {
   try {
     await client.query('BEGIN');
 
-    // Create the message_stats table
+    // Drop the existing message_stats table if it exists (it has wrong structure)
+    await client.query(`DROP TABLE IF EXISTS message_stats CASCADE`);
+
+    // Create the message_stats table with correct structure
     await client.query(`
-      CREATE TABLE IF NOT EXISTS message_stats (
+      CREATE TABLE message_stats (
         id SERIAL PRIMARY KEY,
         user_id UUID NOT NULL,
         session_id UUID,
@@ -26,15 +29,15 @@ async function up() {
 
     // Create indexes for performance
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_message_stats_user_id ON message_stats(user_id)
+      CREATE INDEX idx_message_stats_user_id ON message_stats(user_id)
     `);
 
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_message_stats_session_id ON message_stats(session_id)
+      CREATE INDEX idx_message_stats_session_id ON message_stats(session_id)
     `);
 
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_message_stats_user_session ON message_stats(user_id, session_id)
+      CREATE UNIQUE INDEX idx_message_stats_user_session ON message_stats(user_id, session_id)
     `);
 
     // Create trigger to update message stats when messages are added

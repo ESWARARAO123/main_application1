@@ -27,7 +27,7 @@ try {
 const { pool } = require('../database');
 const documentService = require('../services/documentService');
 const vectorStoreService = require('../services/vectorStoreService');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 // Middleware to check if user is authenticated (similar to chatbot.js)
 const authenticateToken = (req, res, next) => {

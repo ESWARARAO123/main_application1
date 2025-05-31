@@ -163,46 +163,57 @@ async function up() {
     `);
 
     // Create get_recent_documents function
-    await client.query(`
-      CREATE OR REPLACE FUNCTION get_recent_documents(
-        p_user_id UUID, 
-        p_limit INTEGER DEFAULT 20, 
-        p_offset INTEGER DEFAULT 0
-      )
-      RETURNS TABLE(
-        id INTEGER, 
-        title TEXT, 
-        filename TEXT, 
-        file_type TEXT, 
-        status TEXT, 
-        created_at TIMESTAMP WITH TIME ZONE, 
-        collection_id UUID, 
-        collection_name TEXT
-      ) AS $$
-      BEGIN
-          RETURN QUERY
-          SELECT 
-              d.id,
-              d.original_name as title,
-              d.filename,
-              d.file_type,
-              d.status,
-              d.created_at,
-              d.collection_id,
-              c.name as collection_name
-          FROM 
-              public.documents d
-          LEFT JOIN
-              public.document_collections c ON d.collection_id = c.id
-          WHERE 
-              d.user_id = p_user_id
-          ORDER BY 
-              d.created_at DESC
-          LIMIT p_limit
-          OFFSET p_offset;
-      END;
-      $$ LANGUAGE plpgsql;
+    // Check if function already exists with correct signature
+    const existingFunction = await client.query(`
+      SELECT 1 FROM pg_proc p 
+      JOIN pg_namespace n ON p.pronamespace = n.oid 
+      WHERE n.nspname = 'public' AND p.proname = 'get_recent_documents'
     `);
+    
+    if (existingFunction.rows.length > 0) {
+      console.log('Migration 018: get_recent_documents function already exists, skipping creation');
+    } else {
+      await client.query(`
+        CREATE OR REPLACE FUNCTION get_recent_documents(
+          p_user_id UUID, 
+          p_limit INTEGER DEFAULT 20, 
+          p_offset INTEGER DEFAULT 0
+        )
+        RETURNS TABLE(
+          id INTEGER, 
+          title TEXT, 
+          filename TEXT, 
+          file_type TEXT, 
+          status TEXT, 
+          created_at TIMESTAMP WITH TIME ZONE, 
+          collection_id UUID, 
+          collection_name TEXT
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT 
+                d.id,
+                d.original_name as title,
+                d.filename,
+                d.file_type,
+                d.status,
+                d.created_at,
+                d.collection_id,
+                c.name as collection_name
+            FROM 
+                public.documents d
+            LEFT JOIN
+                public.document_collections c ON d.collection_id = c.id
+            WHERE 
+                d.user_id = p_user_id
+            ORDER BY 
+                d.created_at DESC
+            LIMIT p_limit
+            OFFSET p_offset;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+    }
 
     await client.query('COMMIT');
     console.log('Migration 018: Document processing functions created successfully');

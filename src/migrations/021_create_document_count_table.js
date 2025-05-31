@@ -9,9 +9,12 @@ async function up() {
   try {
     await client.query('BEGIN');
 
-    // Create the document_count table
+    // Drop the existing document_count table if it exists (it has wrong structure)
+    await client.query(`DROP TABLE IF EXISTS document_count CASCADE`);
+
+    // Create the document_count table with correct structure
     await client.query(`
-      CREATE TABLE IF NOT EXISTS document_count (
+      CREATE TABLE document_count (
         id SERIAL PRIMARY KEY,
         user_id UUID NOT NULL,
         total_documents INTEGER DEFAULT 0,
@@ -23,7 +26,7 @@ async function up() {
 
     // Create unique index on user_id
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_document_count_user_id ON document_count(user_id)
+      CREATE UNIQUE INDEX idx_document_count_user_id ON document_count(user_id)
     `);
 
     // Create trigger to update document count when documents are added/removed

@@ -404,15 +404,71 @@ class DocumentProcessor {
       };
     }
 
-    // Get the file path and ensure it uses the DATA directory
+    // Get the file path and resolve it properly for the current system
     let { file_path, file_type } = document;
 
-    // Check if the file path needs to be updated to use the DATA directory
-    if (file_path.includes('/documents/') && !file_path.includes('/DATA/documents/')) {
-      file_path = file_path.replace('/documents/', '/DATA/documents/');
+    // Fix file path resolution for cross-platform compatibility
+    let resolvedFilePath = file_path;
+
+    // If the stored path is from a different system, try to resolve it
+    if (file_path.includes('/home/') || file_path.includes('/Users/')) {
+      // This is a Linux/Mac path, let's try to find the file in the current DATA directory
+      console.log(`Detected cross-platform path: ${file_path}`);
+      
+      // Extract the relative path from the user_id onward
+      const pathParts = file_path.split('/');
+      const userIdIndex = pathParts.findIndex(part => part.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/));
+      
+      if (userIdIndex > 0) {
+        // Rebuild the path using current system's DATA directory
+        const relativePath = pathParts.slice(userIdIndex).join(path.sep);
+        resolvedFilePath = path.join(this.documentsDir, relativePath);
+        console.log(`Resolved cross-platform path to: ${resolvedFilePath}`);
+      }
     }
 
-    console.log(`Extracting text from ${file_path} (${file_type})`);
+    // Ensure we're using the DATA directory structure
+    if (!resolvedFilePath.includes('DATA') && !resolvedFilePath.includes(this.documentsDir)) {
+      // If the path doesn't include DATA, try to construct it
+      if (document.user_id && document.id) {
+        const fileName = path.basename(resolvedFilePath);
+        resolvedFilePath = path.join(this.documentsDir, document.user_id, fileName);
+        console.log(`Constructed new path: ${resolvedFilePath}`);
+      }
+    }
+
+    console.log(`Extracting text from ${resolvedFilePath} (${file_type})`);
+
+    // Check if the file actually exists
+    if (!fs.existsSync(resolvedFilePath)) {
+      console.error(`File not found at ${resolvedFilePath}`);
+      
+      // Try alternative paths
+      const alternatives = [
+        // Try with the original filename in the user directory
+        path.join(this.documentsDir, document.user_id, document.original_name),
+        // Try with just the basename in the user directory
+        path.join(this.documentsDir, document.user_id, path.basename(file_path)),
+        // Try the original path as-is (in case it's correct)
+        file_path
+      ];
+
+      for (const altPath of alternatives) {
+        if (fs.existsSync(altPath)) {
+          console.log(`Found file at alternative path: ${altPath}`);
+          resolvedFilePath = altPath;
+          break;
+        }
+      }
+
+      // If still not found, return an error
+      if (!fs.existsSync(resolvedFilePath)) {
+        return {
+          success: false,
+          error: `File not found. Tried paths: ${resolvedFilePath}, ${alternatives.join(', ')}`
+        };
+      }
+    }
 
     try {
       let text = '';
@@ -421,17 +477,17 @@ class DocumentProcessor {
       switch (file_type.toLowerCase()) {
         case 'application/pdf':
         case 'pdf':
-          text = await this.extractPdfText(file_path);
+          text = await this.extractPdfText(resolvedFilePath);
           break;
 
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         case 'docx':
-          text = await this.extractDocxText(file_path);
+          text = await this.extractDocxText(resolvedFilePath);
           break;
 
         case 'text/plain':
         case 'txt':
-          text = await readFile(file_path, 'utf8');
+          text = await readFile(resolvedFilePath, 'utf8');
           break;
 
         default:
@@ -449,7 +505,7 @@ class DocumentProcessor {
         };
       }
 
-      console.log(`Successfully extracted ${text.length} characters from ${file_path}`);
+      console.log(`Successfully extracted ${text.length} characters from ${resolvedFilePath}`);
 
       return {
         success: true,
@@ -457,7 +513,7 @@ class DocumentProcessor {
         length: text.length
       };
     } catch (error) {
-      console.error(`Error extracting text from ${file_path}:`, error);
+      console.error(`Error extracting text from ${resolvedFilePath}:`, error);
       return {
         success: false,
         error: `Failed to extract text: ${error.message}`

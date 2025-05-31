@@ -152,9 +152,14 @@ class VectorStoreService {
           const metadatas = chunks.map(() => ({
             documentId: documentIdStr,
             source: metadata.fileName || 'unknown',
-            // Include sessionId only if it exists in metadata
+            // Ensure all metadata values are strings for ChromaDB compatibility
             ...(metadata.sessionId ? { sessionId: String(metadata.sessionId) } : {}),
-            ...metadata
+            // Convert all other metadata to strings to avoid 422 errors
+            ...Object.fromEntries(
+              Object.entries(metadata)
+                .filter(([key]) => !['sessionId', 'fileName'].includes(key))
+                .map(([key, value]) => [key, String(value)])
+            )
           }));
 
           await this.collection.add({
