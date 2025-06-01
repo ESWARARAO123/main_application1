@@ -94,9 +94,9 @@ export const useChatSessions = () => {
   };
 
   // Create a new chat session
-  const createNewSession = async () => {
+  const createNewSession = async (title?: string) => {
     try {
-      const newSession = await chatbotService.createSession('New Chat');
+      const newSession = await chatbotService.createSession(title || 'New Chat');
       setSessions(prev => [newSession, ...prev]);
       setActiveSessionId(newSession.id);
       setSessionTitle(newSession.title);
@@ -163,6 +163,23 @@ export const useChatSessions = () => {
     }
   };
 
+  // Edit any session title
+  const editSession = async (sessionId: string, newTitle: string) => {
+    try {
+      await chatbotService.updateSession(sessionId, { title: newTitle });
+      setSessions(prev => prev.map(s =>
+        s.id === sessionId ? { ...s, title: newTitle } : s
+      ));
+      
+      // Update the current session title if it's the active session
+      if (sessionId === activeSessionId) {
+        setSessionTitle(newTitle);
+      }
+    } catch (error) {
+      console.error('Error editing session:', error);
+    }
+  };
+
   // Toggle sidebar visibility
   const toggleSidebar = () => {
     setShowSidebar(prev => {
@@ -213,6 +230,7 @@ export const useChatSessions = () => {
     createNewSession,
     deleteSession,
     updateSessionTitle,
+    editSession,
     toggleSidebar,
     toggleGroup,
     resetChat

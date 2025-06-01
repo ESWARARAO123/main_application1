@@ -53,6 +53,7 @@ const Chatbot: React.FC = () => {
     createNewSession,
     deleteSession,
     updateSessionTitle,
+    editSession,
     toggleSidebar,
     toggleGroup,
     resetChat
@@ -586,57 +587,14 @@ const Chatbot: React.FC = () => {
         }}
       >
         <div className="flex items-center space-x-4">
-          {editingTitle ? (
-            <div className="flex items-center">
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={sessionTitle}
-                onChange={(e) => setSessionTitle(e.target.value)}
-                onBlur={updateSessionTitle}
-                onKeyDown={(e) => e.key === 'Enter' && updateSessionTitle()}
-                className="px-3 py-1 rounded-full"
-                style={{
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-text)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)'
-                }}
-              />
-              <button
-                onClick={updateSessionTitle}
-                className="ml-2 p-2 rounded-full hover:bg-opacity-20 hover:bg-gray-500 transition-all hover:scale-105"
-                style={{
-                  color: 'var(--color-primary)',
-                  backgroundColor: 'transparent',
-                  border: '1px solid rgba(255, 255, 255, 0.15)'
-                }}
-              >
-                <CheckIcon className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <h2
-                className="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-none"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {activeSessionId ? sessionTitle : 'New Chat'}
-              </h2>
-              {activeSessionId && (
-                <button
-                  onClick={() => setEditingTitle(true)}
-                  className="ml-2 p-1 rounded-full hover:bg-opacity-20 hover:bg-gray-500 transition-all hover:scale-105"
-                  style={{
-                    color: 'var(--color-text-muted)',
-                    backgroundColor: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.15)'
-                  }}
-                >
-                  <PencilIcon className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center">
+            <h2
+              className="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-none"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {activeSessionId ? sessionTitle : 'New Chat'}
+            </h2>
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -671,7 +629,7 @@ const Chatbot: React.FC = () => {
             className="absolute md:relative h-full transition-all duration-300 ease-in-out z-20 md:z-0"
             style={{
               left: '0',
-              width: window.innerWidth < 768 ? '100%' : '260px'
+              width: window.innerWidth < 768 ? '100%' : '320px'
             }}
           >
             <ChatSidebar
@@ -683,6 +641,7 @@ const Chatbot: React.FC = () => {
               onCreateSession={createNewSession}
               onSelectSession={setActiveSessionId}
               onDeleteSession={deleteSession}
+              onEditSession={editSession}
               onToggleGroup={toggleGroup}
               onToggleCollapse={toggleSidebar}
             />
@@ -699,6 +658,7 @@ const Chatbot: React.FC = () => {
             onCreateSession={createNewSession}
             onSelectSession={setActiveSessionId}
             onDeleteSession={deleteSession}
+            onEditSession={editSession}
             onToggleGroup={toggleGroup}
             onToggleCollapse={toggleSidebar}
           />
@@ -708,7 +668,7 @@ const Chatbot: React.FC = () => {
           className={`absolute inset-0 transition-all duration-300 ease-in-out flex flex-col`}
           style={{
             backgroundColor: 'var(--color-bg)',
-            marginLeft: showSidebar ? (window.innerWidth < 768 ? '0' : '260px') : '0'
+            marginLeft: showSidebar ? (window.innerWidth < 768 ? '0' : '320px') : '0'
           }}
         >
           {/* Context reading indicator - only show when not already displayed in a message */}
@@ -763,7 +723,7 @@ const Chatbot: React.FC = () => {
               <div className="flex justify-center mt-12">
                 <div className="flex flex-wrap justify-center gap-2">
                   <button
-                    onClick={createNewSession}
+                    onClick={() => createNewSession()}
                     className="px-4 py-2 rounded-md text-sm flex items-center hover:bg-opacity-10 hover:bg-gray-500"
                     style={{
                       backgroundColor: 'var(--color-surface-dark)',
