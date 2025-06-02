@@ -176,26 +176,38 @@ async def get_database_schema() -> Dict[str, Any]:
 async def generate_sql_with_ollama(query: str, schema: Dict[str, Any]) -> str:
     """Generate SQL query from natural language using Ollama."""
     try:
+        # Handle common queries with predefined patterns
+        query_lower = query.lower().strip()
+        
+        # Pattern matching for common queries
+        if any(phrase in query_lower for phrase in ['list tables', 'show tables', 'all tables', 'tables in database']):
+            return "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+        
+        if any(phrase in query_lower for phrase in ['list users', 'show users', 'all users']):
+            return "SELECT * FROM users LIMIT 10;"
+        
+        if any(phrase in query_lower for phrase in ['list sessions', 'show sessions', 'all sessions']):
+            return "SELECT * FROM sessions LIMIT 10;"
         # Prepare the prompt for Ollama
-        prompt = f"""Given the following database schema:
+        prompt = f"""You are a PostgreSQL expert. Generate ONLY a valid SQL query for the given question.
+
+Database Schema:
 {json.dumps(schema, indent=2)}
 
-Generate a valid PostgreSQL SQL query for this question: {query}
+Question: {query}
 
-Rules:
-1. Only use tables that exist in the schema
-2. Return valid PostgreSQL syntax
-3. Do not include any explanations, only the SQL query
-4. Do not use backticks or any special characters
-5. Use proper table names from the schema
-6. If asking about users, use the correct table name from the schema
-7. Always use SELECT statement
-8. Always include a WHERE clause if filtering data
-9. Always use proper table aliases
-10. Always use proper column names from the schema
-11. For information_schema queries, use table_schema not schema_name
-12. For listing tables, use: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
-13. For showing table data, use: SELECT * FROM <table_name>;
+CRITICAL RULES:
+1. Return ONLY the SQL query, no explanations or markdown
+2. Use exact column names from the schema above
+3. For listing all tables, ALWAYS use: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+4. For table structure, use: SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'table_name';
+5. Use proper PostgreSQL syntax
+6. Always end with semicolon
+
+Common queries:
+- List tables: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+- Show table data: SELECT * FROM table_name LIMIT 10;
+- Count rows: SELECT COUNT(*) FROM table_name;
 
 SQL Query:"""
 

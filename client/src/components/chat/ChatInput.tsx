@@ -16,7 +16,6 @@ import FileUploadButton from './FileUploadButton';
 import FilePreview from './FilePreview';
 import './ChatInput.css';
 import { fetchChat2SqlResult } from '../../utils/chat2sqlApi'; // Added for Chat2SQL API
-import { chatbotService } from '../../services/chatbotService'; // Added for saving messages
 import { documentService } from '../../services/documentService'; // Added for document uploads
 
 interface ChatInputProps {
@@ -91,8 +90,48 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const message = input.trim();
     setInput('');
 
-    // Send the message without a file
-    onSendMessage(message);
+    // Handle Chat2SQL requests
+    if (isChat2SqlEnabled) {
+      console.log('Chat2SQL mode enabled, processing query:', message);
+      
+      // Send the user message first (as a regular message)
+      onSendMessage(message);
+      
+      setLocalLoading(true);
+      
+      try {
+        // Call the Chat2SQL API
+        const result = await fetchChat2SqlResult(message, currentSessionId);
+        console.log('Chat2SQL result received:', result);
+        
+        // Then send the AI response with the SQL result
+        onSendMessage(result.data, undefined, {
+          chat2sql: true,
+          isServerResponse: true,
+          content: result.data,
+          columns: result.columns,
+          timestamp: new Date().toISOString(),
+          id: `chat2sql-${Date.now()}`
+        });
+        
+      } catch (error) {
+        console.error('Chat2SQL error:', error);
+        
+        // Send error response
+        onSendMessage(`Error: ${error instanceof Error ? error.message : 'Failed to execute SQL query'}`, undefined, {
+          chat2sql: true,
+          isServerResponse: true,
+          error: error instanceof Error ? error.message : 'Failed to execute SQL query',
+          timestamp: new Date().toISOString(),
+          id: `chat2sql-error-${Date.now()}`
+        });
+      } finally {
+        setLocalLoading(false);
+      }
+    } else {
+      // Send regular message
+      onSendMessage(message);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
