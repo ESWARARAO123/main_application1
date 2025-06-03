@@ -43,6 +43,31 @@ export interface ExtendedChatMessage extends Omit<ChatMessage, 'role'> {
   documentStatus?: string; // Status of document processing
   isSqlResult?: boolean; // Flag to indicate this is a SQL query result
   isSqlQuery?: boolean; // Flag to indicate this is a SQL query from the user
+  predictor?: boolean; // Flag to indicate this is a predictor-related message
+  predictions?: PredictionResult[]; // Array of prediction results
+  downloadUrl?: string; // URL for downloading files
+  fileName?: string; // Name of the file to download
+  showDownloadButton?: boolean; // Flag to indicate if download button should be shown
+  error?: string; // Error message for failed operations
+  isUserCommand?: boolean; // Flag to indicate this is a user command in predictor mode
+}
+
+export interface PredictionResult {
+  beginpoint: string;
+  endpoint: string;
+  place_slack: number;
+  cts_slack: number;
+  predicted_route_slack: number;
+  fanout: number;
+  netcount: number;
+  netdelay: number;
+  invdelay: number;
+  bufdelay: number;
+  seqdelay: number;
+  skew: number;
+  combodelay: number;
+  wirelength: number;
+  slack: number;
 }
 
 export interface ChatSession {

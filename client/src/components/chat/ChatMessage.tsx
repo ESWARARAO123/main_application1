@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage as ChatMessageType, ExtendedChatMessage } from '../../types';
+import { ChatMessage as ChatMessageType, ExtendedChatMessage, PredictionResult } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -85,7 +85,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     const codeBlockPattern = /```(?:json)?\s*(\{[\s\S]*?"tool":\s*"runshellcommand"[\s\S]*?\})\s*```/i;
     const codeBlockMatch = message.content.match(codeBlockPattern);
     if (codeBlockMatch) {
-      return codeBlockMatch[0];
+      return codeBlockMatch[1];
     }
 
     return undefined;
@@ -452,13 +452,35 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     >
       <div style={isAI ? messageBubbleStyles.ai.header : messageBubbleStyles.user.header}>
         {isAI ? (
-          <div style={messageBubbleStyles.ai.avatar}>
-            AI
-          </div>
+          <>
+            <div style={messageBubbleStyles.ai.avatar}>
+              AI
+            </div>
+            <div style={{
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              color: 'var(--color-primary)',
+              marginRight: '0.5rem',
+              letterSpacing: '0.025em'
+            }}>
+              AI
+            </div>
+          </>
         ) : (
-          <div style={messageBubbleStyles.user.avatar}>
-            <UserIcon className="w-5 h-5" />
-          </div>
+          <>
+            <div style={messageBubbleStyles.user.avatar}>
+              <UserIcon className="w-5 h-5" />
+            </div>
+            <div style={{
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              color: 'var(--color-primary)',
+              marginRight: '0.5rem',
+              letterSpacing: '0.025em'
+            }}>
+              USER
+            </div>
+          </>
         )}
         <div style={isAI ? messageBubbleStyles.ai.timestamp : messageBubbleStyles.user.timestamp}>
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -507,7 +529,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                 {formatFileSize(message.fileAttachment.size)}
                 {message.fileAttachment.status && (
                   <>
-                    <span style={{ margin: '0 0.25rem' }}>•</span>
+                    <span style={{ margin: '0 0.25rem' }}>?</span>
                     <span style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -810,6 +832,206 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                     {message.content}
                   </ReactMarkdown>
                 </div>
+              </>
+            ) : message.predictor ? (
+              // Show Predictor results with special formatting
+              <>
+                <div className="predictor-result-header flex items-center mb-2 p-2 bg-green-50 dark:bg-green-900 rounded">
+                  <span className="predictor-result-icon mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 dark:text-green-300" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707l-5.414 5.414a1 1 0 01-.707.293H8a1 1 0 01-.707-.293L2.293 6.707A1 1 0 012 6V3zm14 12a1 1 0 01-1 1H4a1 1 0 01-1-1v-3a1 1 0 01.293-.707l5.414-5.414a1 1 0 01.707-.293h2.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0117 12v3z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <span className="predictor-result-title font-medium text-green-700 dark:text-green-300">
+                    Predictor Result
+                  </span>
+                </div>
+                <div className="predictor-result-content overflow-x-auto border border-gray-200 dark:border-gray-700 rounded p-2 bg-white dark:bg-gray-800">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={components}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+                {/* Display Prediction Table */}
+                {message.predictor && (() => {
+                  console.log('Checking prediction display conditions:', {
+                    isPredictor: message.predictor,
+                    hasPredictions: !!message.predictions,
+                    predictionsLength: message.predictions?.length,
+                    messageId: message.id
+                  });
+                  return true;
+                })() && message.predictions && message.predictions.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <div style={{
+                      backgroundColor: 'var(--color-surface-light)',
+                      borderRadius: '0.5rem',
+                      padding: '1rem',
+                      border: '1px solid var(--color-border)',
+                      marginBottom: '1rem'
+                    }}>
+                      <h4 style={{
+                        margin: '0 0 1rem 0',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        color: 'var(--color-text)'
+                      }}>
+                        🎯 Predicted Route Table ({message.predictions.length} routes)
+                      </h4>
+                      
+                      <div style={{
+                        overflowX: 'auto',
+                        maxHeight: '400px',
+                        overflowY: 'auto'
+                      }}>
+                        <table style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: '0.85rem'
+                        }}>
+                          <thead>
+                            <tr style={{ backgroundColor: 'var(--color-surface-dark)' }}>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Endpoint</th>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Place Slack</th>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>CTS Slack</th>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Predicted Route Slack</th>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Fanout</th>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Net Count</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {message.predictions.slice(0, 10).map((prediction: PredictionResult, index: number) => (
+                              <tr key={index} style={{ 
+                                backgroundColor: index % 2 === 0 ? 'transparent' : 'var(--color-surface-light)' 
+                              }}>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                  {prediction.endpoint || prediction.beginpoint}
+                                </td>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                  {typeof prediction.place_slack === 'number' ? prediction.place_slack.toFixed(4) : prediction.place_slack}
+                                </td>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                  {typeof prediction.cts_slack === 'number' ? prediction.cts_slack.toFixed(4) : prediction.cts_slack}
+                                </td>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)', fontWeight: 600 }}>
+                                  {typeof prediction.predicted_route_slack === 'number' ? prediction.predicted_route_slack.toFixed(4) : prediction.predicted_route_slack}
+                                </td>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                  {typeof prediction.fanout === 'number' ? prediction.fanout.toFixed(2) : prediction.fanout}
+                                </td>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                  {typeof prediction.netcount === 'number' ? prediction.netcount.toFixed(0) : prediction.netcount}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {message.predictions.length > 10 && (
+                        <div style={{
+                          marginTop: '0.5rem',
+                          fontSize: '0.8rem',
+                          color: 'var(--color-text-muted)',
+                          textAlign: 'center'
+                        }}>
+                          Showing first 10 of {message.predictions.length} predictions
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Download Button */}
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <a
+                        href="http://127.0.0.1:8088/results/download?format=csv"
+                        download="predicted_route_table.csv"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'white',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.25rem',
+                          textDecoration: 'none',
+                          fontSize: '0.85rem',
+                          fontWeight: 500,
+                          transition: 'all 0.2s ease',
+                        }}
+                        onClick={(e) => {
+                          // Dispatch a custom event to trigger download in chat context if needed
+                          const event = new CustomEvent('predictor-download', {
+                            detail: { predictions: message.predictions },
+                          });
+                          window.dispatchEvent(event);
+                        }}
+                      >
+                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                        Download Complete Route Table ({message.predictions.length} routes) as CSV
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Display error information for predictor messages */}
+                {message.predictor && message.error && (
+                  <div style={{
+                    marginTop: '1rem',
+                    backgroundColor: 'var(--color-error-light)',
+                    borderRadius: '0.5rem',
+                    padding: '1rem',
+                    border: '1px solid var(--color-error)',
+                  }}>
+                    <h4 style={{
+                      margin: '0 0 0.5rem 0',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      color: 'var(--color-error)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <InformationCircleIcon className="h-5 w-5 mr-2" />
+                      Prediction Error Details
+                    </h4>
+                    <div style={{
+                      fontSize: '0.9rem',
+                      color: 'var(--color-text)',
+                      fontFamily: 'monospace',
+                      backgroundColor: 'var(--color-surface)',
+                      padding: '0.5rem',
+                      borderRadius: '0.25rem',
+                      border: '1px solid var(--color-border)'
+                    }}>
+                      {message.error}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Handle Download Initiation Message */}
+                {message.downloadUrl && message.fileName && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <a
+                      href={message.downloadUrl}
+                      download={message.fileName}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: 'var(--color-success)',
+                        color: 'white',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.25rem',
+                        textDecoration: 'none',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                      Download {message.fileName}
+                    </a>
+                  </div>
+                )}
               </>
             ) : (
               <ReactMarkdown

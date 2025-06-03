@@ -11,7 +11,10 @@ export const messageBubbleStyles = {
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'flex-start',
-      marginBottom: '1rem',
+      marginBottom: '1.5rem',
+      width: '100%',
+      paddingBottom: '0.5rem',
+      borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
     },
     avatar: {
       width: '2rem',
@@ -31,6 +34,7 @@ export const messageBubbleStyles = {
       display: 'flex',
       alignItems: 'center',
       marginBottom: '0.5rem',
+      width: '100%',
     },
     content: {
       color: 'var(--color-text)',
@@ -38,7 +42,7 @@ export const messageBubbleStyles = {
       borderRadius: '0.75rem 0.75rem 0.75rem 0',
       padding: '0.75rem 1rem',
       maxWidth: '85%',
-      marginLeft: '2.75rem',
+      marginLeft: '0',
       boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
       overflowWrap: 'break-word' as const,
       wordWrap: 'break-word' as const,
@@ -47,6 +51,7 @@ export const messageBubbleStyles = {
     timestamp: {
       fontSize: '0.75rem',
       color: 'var(--color-text-muted)',
+      marginLeft: 'auto',
     },
     codeBlock: {
       borderRadius: '0.5rem',
@@ -69,7 +74,10 @@ export const messageBubbleStyles = {
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'flex-end',
-      marginBottom: '1rem',
+      marginBottom: '1.5rem',
+      width: '100%',
+      paddingBottom: '0.5rem',
+      borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
     },
     avatar: {
       width: '2rem',
@@ -88,6 +96,7 @@ export const messageBubbleStyles = {
       alignItems: 'center',
       marginBottom: '0.5rem',
       justifyContent: 'flex-end',
+      width: '100%',
     },
     content: {
       color: 'white',
@@ -104,6 +113,7 @@ export const messageBubbleStyles = {
     timestamp: {
       fontSize: '0.75rem',
       color: 'var(--color-text-muted)',
+      marginRight: 'auto',
     },
   },
 };

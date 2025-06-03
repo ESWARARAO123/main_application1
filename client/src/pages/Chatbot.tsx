@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'; // Added useState
+import React, { useRef, useEffect, useState } from 'react';
 import { animations } from '../components/chat/chatStyles';
 import {
   ArrowPathIcon,
@@ -24,6 +24,7 @@ import { useChatMessaging } from '../hooks/useChatMessaging';
 import { useContextHandling } from '../hooks/useContextHandling';
 import { ExtendedChatMessage } from '../types';
 import { chatbotService } from '../services/chatbotService';
+import TrainingForm from '../components/TrainingForm'; // Added for predictor training form
 
 const Chatbot: React.FC = () => {
   const { isExpanded: isMainSidebarExpanded } = useSidebar();
@@ -98,29 +99,26 @@ const Chatbot: React.FC = () => {
   // MCP Server selector state
   const [showServerSelector, setShowServerSelector] = useState(false);
 
+  // Chat2SQL state
+  const [isChat2SqlEnabled, setIsChat2SqlEnabled] = useState(false);
+
+  // Predictor state - Added
+  const [isPredictorEnabled, setIsPredictorEnabled] = useState(false);
+  const [showTrainingForm, setShowTrainingForm] = useState(false);
+
   // Enhanced MCP helper functions
   const selectServer = async (serverId: string) => {
     console.log('Selected MCP server:', serverId);
     
     try {
-      // The MCPServerSelector component handles the actual connection
-      // We just need to wait a moment for the connection to establish
-      // and then enable the agent and close the dialog
-      
-      // Wait for connection establishment (3 seconds should be enough)
       setTimeout(() => {
-        // Enable the MCP agent if not already enabled
         if (!isMCPEnabled) {
           toggleMCPEnabled();
         }
-        
-        // Close the server selector
         setShowServerSelector(false);
       }, 3000);
-      
     } catch (error) {
       console.error('Error in server selection:', error);
-      // Keep dialog open if there's an error
     }
   };
 
@@ -128,7 +126,7 @@ const Chatbot: React.FC = () => {
     const contextMessage: ExtendedChatMessage = {
       id: `context-tool-${Date.now()}`,
       role: 'assistant',
-      content: '🔍 Reading context from uploaded documents...',
+      content: '? Reading context from uploaded documents...',
       timestamp: new Date(),
       isContextMessage: true
     };
@@ -150,37 +148,38 @@ const Chatbot: React.FC = () => {
     fetchSessions: () => void
   ) => {
     console.log('MCP Chat message handling:', content);
-    // For now, fall back to regular chat handling
-    // This can be enhanced when MCP Agent context provides chat functionality
     throw new Error('MCP chat functionality not yet implemented');
   };
 
   // Tool execution state
   const { isExecutingTool, currentTool, executeTool } = useToolExecution();
 
-  // Chat2SQL state - Added
-  const [isChat2SqlEnabled, setIsChat2SqlEnabled] = useState(false);
-
-  // Toggle Chat2SQL mode - Added
+  // Toggle Chat2SQL mode
   const handleToggleChat2Sql = () => {
     setIsChat2SqlEnabled(prev => !prev);
   };
+
+  // Listen for predictor messages from TrainingForm - Added
+  useEffect(() => {
+    const handlePredictorMessage = (event: CustomEvent) => {
+      setMessages((prev) => [...prev, event.detail.message]);
+    };
+
+    window.addEventListener('addPredictorMessage', handlePredictorMessage as EventListener);
+    return () => {
+      window.removeEventListener('addPredictorMessage', handlePredictorMessage as EventListener);
+    };
+  }, [setMessages]);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch sessions on component mount and ensure WebSocket connection
   useEffect(() => {
     fetchSessions();
-
-    // Initial RAG availability check
     checkRagAvailability();
-
-    // Force check document status on mount
     forceCheckDocumentStatus(messages, setMessages, setIsLoading, setIsStreaming);
     
-    // Check for stored context rules and add them to the messages array
     if (activeSessionId) {
-      // Check if we've already loaded context rules for this session
       if (contextRulesLoadedRef.current[activeSessionId]) {
         console.log('Context rules already loaded for session:', activeSessionId);
         return;
@@ -188,7 +187,6 @@ const Chatbot: React.FC = () => {
       
       const contextRulesKey = `context_rules_${activeSessionId}`;
       try {
-        // Try session storage first, then local storage
         let storedContextRules = sessionStorage.getItem(contextRulesKey) || localStorage.getItem(contextRulesKey);
         
         if (storedContextRules) {
@@ -197,7 +195,6 @@ const Chatbot: React.FC = () => {
           if (parsedRules.hasContext && parsedRules.rules) {
             console.log('Found stored context rules for conversation:', activeSessionId);
             
-            // Add the system message with context rules to the messages array
             const systemContextMessage: ExtendedChatMessage = {
               id: `system-context-${Date.now()}`,
               role: 'system',
@@ -206,9 +203,7 @@ const Chatbot: React.FC = () => {
               isContextMessage: true
             };
             
-            // Add the system message to the messages array
-              setMessages(prev => {
-              // Check if we already have a similar system message to avoid duplicates
+            setMessages(prev => {
               const hasSimilarMessage = prev.some(msg => 
                 msg.role === 'system' && 
                 msg.content.includes('User context loaded:')
@@ -216,17 +211,16 @@ const Chatbot: React.FC = () => {
               
               if (hasSimilarMessage) {
                 console.log('Similar system message already exists, not adding another one');
-                  return prev;
-                }
+                return prev;
+              }
 
               return [...prev, systemContextMessage];
             });
             
-            // Mark this session as processed
             contextRulesLoadedRef.current[activeSessionId] = true;
-              }
-            }
-          } catch (error) {
+          }
+        }
+      } catch (error) {
         console.error('Error checking for stored context rules:', error);
       }
     }
@@ -236,23 +230,18 @@ const Chatbot: React.FC = () => {
   useEffect(() => {
     if (activeSessionId) {
       fetchSessionMessages(activeSessionId);
-
-      // Check for context in localStorage
       const storedContext = checkForStoredContext(activeSessionId);
       if (storedContext) {
         console.log('Using stored context from localStorage:', storedContext);
       }
       
-      // Check for stored context rules
       const contextRulesKey = `context_rules_${activeSessionId}`;
       try {
-        // Check if we've already loaded context rules for this session
         if (contextRulesLoadedRef.current[activeSessionId]) {
           console.log('Context rules already loaded for session:', activeSessionId);
           return;
         }
         
-        // Try session storage first, then local storage
         let storedContextRules = sessionStorage.getItem(contextRulesKey) || localStorage.getItem(contextRulesKey);
         
         if (storedContextRules) {
@@ -261,7 +250,6 @@ const Chatbot: React.FC = () => {
           if (parsedRules.hasContext && parsedRules.rules) {
             console.log('Found stored context rules for conversation:', activeSessionId);
             
-            // Add the system message with context rules to the messages array
             const systemContextMessage: ExtendedChatMessage = {
               id: `system-context-${Date.now()}`,
               role: 'system',
@@ -270,11 +258,8 @@ const Chatbot: React.FC = () => {
               isContextMessage: true
             };
             
-            // Add the system message to the messages array after a slight delay
-            // to ensure the messages from fetchSessionMessages are loaded first
             setTimeout(() => {
               setMessages(prev => {
-                // Check if we already have a similar system message to avoid duplicates
                 const hasSimilarMessage = prev.some(msg => 
                   msg.role === 'system' && 
                   msg.content.includes('User context loaded:')
@@ -288,12 +273,11 @@ const Chatbot: React.FC = () => {
                 return [...prev, systemContextMessage];
               });
               
-              // Mark this session as processed
               contextRulesLoadedRef.current[activeSessionId] = true;
             }, 500);
+          }
         }
-      }
-    } catch (error) {
+      } catch (error) {
         console.error('Error checking for stored context rules:', error);
       }
     } else {
@@ -306,7 +290,6 @@ const Chatbot: React.FC = () => {
     const handleRefreshMessages = (event: CustomEvent<{ conversationId: string; source?: string }>) => {
       const { conversationId, source } = event.detail;
 
-      // Skip refreshing if the source is the context tool
       if (source === 'context_tool') {
         console.log('Skipping refresh from context tool to prevent UI issues');
         return;
@@ -318,17 +301,13 @@ const Chatbot: React.FC = () => {
       }
     };
 
-    // Add event listener for refreshMessages
     window.addEventListener('refreshMessages', handleRefreshMessages as EventListener);
 
-    // Listen for system message additions (like context rules)
     const handleAddSystemMessage = (event: CustomEvent<{ message: ExtendedChatMessage }>) => {
       const { message } = event.detail;
       console.log('Adding system message to conversation:', message);
       
-      // Add the system message to the messages array
-        setMessages(prev => {
-        // Check if we already have a similar system message to avoid duplicates
+      setMessages(prev => {
         const hasSimilarMessage = prev.some(msg => 
           msg.role === 'system' && 
           msg.content.includes('User context loaded:')
@@ -336,14 +315,12 @@ const Chatbot: React.FC = () => {
         
         if (hasSimilarMessage) {
           console.log('Similar system message already exists, replacing it');
-          // Return the same array if we're already replacing a message to prevent re-renders
           const updatedMessages = prev.map(msg => 
             (msg.role === 'system' && msg.content.includes('User context loaded:'))
               ? message
               : msg
           );
           
-          // Check if anything actually changed
           const hasChanges = updatedMessages.some((msg, idx) => msg !== prev[idx]);
           if (!hasChanges) {
             console.log('No changes needed to system messages');
@@ -357,10 +334,8 @@ const Chatbot: React.FC = () => {
       });
     };
     
-    // Add event listener for system messages
     window.addEventListener('addSystemMessage', handleAddSystemMessage as EventListener);
 
-    // Clean up
     return () => {
       window.removeEventListener('refreshMessages', handleRefreshMessages as EventListener);
       window.removeEventListener('addSystemMessage', handleAddSystemMessage as EventListener);
@@ -370,23 +345,19 @@ const Chatbot: React.FC = () => {
   // WebSocket reconnection
   const { connected: wsConnected, reconnect: wsReconnect } = useWebSocket();
   useEffect(() => {
-    // Set up periodic checks with a reasonable interval (30 seconds)
     const periodicCheckInterval = setInterval(() => {
-      // Only check RAG if we haven't already shown the notification
       if (!ragNotificationShown) {
         console.log('Performing periodic document status check');
         forceCheckDocumentStatus(messages, setMessages, setIsLoading, setIsStreaming);
         checkRagAvailability();
       }
 
-      // Always check WebSocket connection
       if (!wsConnected) {
         console.log('WebSocket not connected during periodic check, attempting to reconnect...');
         wsReconnect();
       }
     }, 30000);
 
-    // Clean up interval on unmount
     return () => {
       clearInterval(periodicCheckInterval);
     };
@@ -400,14 +371,59 @@ const Chatbot: React.FC = () => {
   }, [editingTitle]);
 
   const handleSendMessage = async (content: string, file?: File, meta?: any) => {
-    // Allow sending if there's text or a file
     if ((content.trim() === '' && !file) || isLoading || isUploading) return;
 
-    // Handle Chat2SQL messages - Added
+    // Handle Predictor messages - Added
+    if (isPredictorEnabled) {
+      if (content.toLowerCase().trim() === 'train') {
+        setShowTrainingForm(true);
+        return;
+      }
+    }
+
+    // Handle Predictor messages
+    if (meta?.predictor) {
+      console.log('Handling Predictor response in Chatbot.tsx...', meta);
+      
+      if (meta.isServerResponse) {
+        const aiMessage: ExtendedChatMessage = {
+          id: meta.id,
+          role: 'assistant',
+          content: meta.error ? `Error: ${meta.error}` : meta.content,
+          timestamp: new Date(meta.timestamp),
+          predictor: true,
+          predictions: meta.predictions,
+          error: meta.error,
+          showDownloadButton: meta.showDownloadButton
+        };
+        
+        console.log('Predictor result message:', aiMessage);
+        setMessages(prev => [...prev, aiMessage]);
+        return;
+      }
+      
+      if (meta.isUserCommand) {
+        const userMessage: ExtendedChatMessage = {
+          id: meta.id,
+          role: 'user',
+          content: content.trim(),
+          timestamp: new Date(meta.timestamp),
+          predictor: true,
+          isUserCommand: true
+        };
+
+        console.log('User predictor command message:', userMessage);
+        setMessages(prev => [...prev, userMessage]);
+        return;
+      }
+
+      return;
+    }
+
+    // Handle Chat2SQL messages
     if (meta?.chat2sql) {
       console.log('Handling Chat2SQL response in Chatbot.tsx...', meta);
       
-      // If this is the SQL result from the server
       if (meta.isServerResponse) {
         const aiMessage: ExtendedChatMessage = {
           id: meta.id,
@@ -422,21 +438,18 @@ const Chatbot: React.FC = () => {
         return;
       }
       
-      // If this is the user query
       if (meta.isUserMessage) {
         const userMessage: ExtendedChatMessage = {
           id: `user-${Date.now()}`,
           role: 'user',
           content: content.trim(),
           timestamp: new Date(),
-          isSqlQuery: true // Mark this as a SQL query
+          isSqlQuery: true
         };
 
         console.log('User SQL query message:', userMessage);
-        // Add the user message to the chat
         setMessages(prev => [...prev, userMessage]);
 
-        // Update session ID in database entries if needed
         if (activeSessionId) {
           try {
             await chatbotService.updateMessageSessionId('temp-session-id', activeSessionId);
@@ -445,28 +458,23 @@ const Chatbot: React.FC = () => {
           }
         }
 
-        // Important: Skip AI response generation by returning early
         return;
       }
 
       return;
     }
 
-    // Special handling for read_context command - only trigger for exact match
+    // Special handling for read_context command
     if (content.trim().toLowerCase() === 'read_context') {
       console.log('Detected exact read_context command, triggering context tool directly');
       const aiMessage = createContextToolMessage();
       setMessages(prev => [...prev, aiMessage]);
       return;
     }
-
-    // Don't trigger for phrases that contain read_context but aren't exactly the command
-    // For example "what does read_context do?" should not trigger the tool
     
-    // If MCP is enabled, use MCP chat service
+    // Handle MCP messages
     if (isMCPEnabled && !file && content.trim() !== '') {
       try {
-        // First add the user message to the UI immediately
         const userMessage: ExtendedChatMessage = {
           id: `user-${Date.now()}`,
           role: 'user',
@@ -475,19 +483,18 @@ const Chatbot: React.FC = () => {
         };
         setMessages(prev => [...prev, userMessage]);
 
-        // Then handle the MCP chat message
         await handleMCPChatMessage(
           content,
           messages,
           activeSessionId,
-          { id: selectedModelId }, // Just pass the ID, the handler will get details
+          { id: selectedModelId },
           streamedContentRef,
           abortFunctionRef,
           setMessages,
           setIsStreaming,
           setIsLoading,
           executeTool,
-          chatbotService, // Pass chatbotService to ensure messages are saved
+          chatbotService,
           fetchSessions
         );
         return;
@@ -499,11 +506,16 @@ const Chatbot: React.FC = () => {
           content: `Error: ${error.message}. Falling back to normal chat.`,
           timestamp: new Date()
         }]);
-        // Fall through to regular chat handling below
       }
     }
 
-    // Use our extracted chat message sending function
+    // Skip regular chat if predictor mode is enabled (predictor handles its own messages)
+    if (isPredictorEnabled && !meta) {
+      console.log('Predictor mode enabled but no meta data - skipping regular chat');
+      return;
+    }
+
+    // Regular chat message handling
     const result = await sendChatMessage(
       content, 
       file, 
@@ -516,7 +528,6 @@ const Chatbot: React.FC = () => {
       fetchSessions
     );
     
-    // Update active session ID if needed
     if (result?.newSessionId && (!activeSessionId || activeSessionId !== result.newSessionId)) {
       setActiveSessionId(result.newSessionId);
     }
@@ -525,10 +536,8 @@ const Chatbot: React.FC = () => {
   // Toggle MCP mode
   const handleToggleMCP = () => {
     if (!isMCPEnabled && !isMCPConnected) {
-      // If MCP is not enabled and not connected, show server selector first
       setShowServerSelector(true);
     } else {
-      // If already enabled/connected, just toggle the agent
       toggleMCPEnabled();
     }
   };
@@ -671,7 +680,6 @@ const Chatbot: React.FC = () => {
             marginLeft: showSidebar ? (window.innerWidth < 768 ? '0' : '320px') : '0'
           }}
         >
-          {/* Context reading indicator - only show when not already displayed in a message */}
           {isExecutingTool && currentTool === 'read_context' && !messages.some(msg =>
             msg.role === 'assistant' && containsReadContextToolCall(msg.content)
           ) && (
@@ -689,6 +697,15 @@ const Chatbot: React.FC = () => {
             isEmpty={isEmpty}
             conversationId={activeSessionId || undefined}
           />
+
+          {/* Training Form (shown when triggered) - Added */}
+          {showTrainingForm && (
+            <div className="px-4 py-2">
+              <TrainingForm
+                onTrainingComplete={() => setShowTrainingForm(false)}
+              />
+            </div>
+          )}
 
           <div
             className={`${isEmpty ? "absolute left-1/2 bottom-[10%] transform -translate-x-1/2" : "absolute bottom-0 left-0 right-0"}
@@ -715,8 +732,39 @@ const Chatbot: React.FC = () => {
               isMCPAvailable={isMCPConnected}
               isMCPEnabled={isMCPEnabled}
               onToggleMCP={handleToggleMCP}
-              isChat2SqlEnabled={isChat2SqlEnabled} // Added for Chat2SQL
-              onToggleChat2Sql={handleToggleChat2Sql} // Added for Chat2SQL
+              isChat2SqlEnabled={isChat2SqlEnabled}
+              onToggleChat2Sql={handleToggleChat2Sql}
+              // Added predictor props
+              isPredictorEnabled={isPredictorEnabled}
+              onTogglePredictor={() => {
+                setIsPredictorEnabled((prev) => {
+                  const newValue = !prev;
+                  if (newValue) {
+                    // Send welcome message when predictor is activated
+                    const welcomeMessage = {
+                      id: `predictor-welcome-${Date.now()}`,
+                      role: 'assistant' as const,
+                      content: `🤖 **Predictor Mode Activated**
+
+I'm ready to help you train models and make predictions! 
+
+To get started, you can:
+- Type: "To obtain the results, I need to train and then make a prediction using the 3 csvs"
+- Or simply type: "train" to start training
+- Or type: "predict" to make predictions (after training)
+
+What would you like to do?`,
+                      timestamp: new Date(),
+                      predictor: true,
+                      isServerResponse: true,
+                    };
+                    
+                    setMessages(prev => [...prev, welcomeMessage]);
+                  }
+                  setShowTrainingForm(false);
+                  return newValue;
+                });
+              }}
             />
 
             {isEmpty && (
