@@ -612,11 +612,16 @@ const Chatbot: React.FC = () => {
         
         if (sessionId) {
           try {
-            await chatbotService.sendMessage(
+            await chatbotService.sendPredictorMessage(
               '', // Empty user message since this is AI response
               sessionId,
               meta.error ? `Error: ${meta.error}` : meta.content,
-              false
+              {
+                chat2sql: true,
+                isSqlResult: true,
+                isServerResponse: true,
+                error: meta.error
+              }
             );
             console.log('Chat2SQL AI message saved to database');
           } catch (error) {
@@ -655,11 +660,15 @@ const Chatbot: React.FC = () => {
         
         if (sessionId) {
           try {
-            await chatbotService.sendMessage(
+            await chatbotService.sendPredictorMessage(
               content.trim(),
               sessionId,
               '', // Empty response since this is user message
-              false
+              {
+                chat2sql: true,
+                isSqlQuery: true,
+                isUserMessage: true
+              }
             );
             console.log('Chat2SQL user message saved to database');
           } catch (error) {

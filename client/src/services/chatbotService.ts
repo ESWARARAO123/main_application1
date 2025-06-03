@@ -172,6 +172,10 @@ export const chatbotService = {
       showDownloadButton?: boolean;
       isUserCommand?: boolean;
       isServerResponse?: boolean;
+      chat2sql?: boolean;
+      isSqlResult?: boolean;
+      isSqlQuery?: boolean;
+      isUserMessage?: boolean;
     }
   ): Promise<ChatMessageResponse> => {
     try {

@@ -51,6 +51,8 @@ export interface ExtendedChatMessage extends Omit<ChatMessage, 'role'> {
   error?: string; // Error message for failed operations
   isUserCommand?: boolean; // Flag to indicate this is a user command in predictor mode
   isServerResponse?: boolean; // Flag to indicate this is a server response in predictor mode
+  chat2sql?: boolean; // Flag to indicate this is a Chat2SQL message
+  isUserMessage?: boolean; // Flag to indicate this is a user message in Chat2SQL mode
 }
 
 export interface PredictionResult {

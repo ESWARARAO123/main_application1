@@ -197,8 +197,11 @@ router.get('/sessions/:sessionId', isAuthenticated, async (req, res) => {
         };
         
         // Add predictor data to user message if available
-        if (predictorData && predictorData.isUserCommand) {
-          userMessage.isUserCommand = predictorData.isUserCommand;
+        if (predictorData) {
+          if (predictorData.isUserCommand) userMessage.isUserCommand = predictorData.isUserCommand;
+          if (predictorData.chat2sql) userMessage.chat2sql = predictorData.chat2sql;
+          if (predictorData.isSqlQuery) userMessage.isSqlQuery = predictorData.isSqlQuery;
+          if (predictorData.isUserMessage) userMessage.isUserMessage = predictorData.isUserMessage;
         }
         
         messages.push(userMessage);
@@ -221,6 +224,8 @@ router.get('/sessions/:sessionId', isAuthenticated, async (req, res) => {
           if (predictorData.error) assistantMessage.error = predictorData.error;
           if (predictorData.showDownloadButton) assistantMessage.showDownloadButton = predictorData.showDownloadButton;
           if (predictorData.isServerResponse) assistantMessage.isServerResponse = predictorData.isServerResponse;
+          if (predictorData.chat2sql) assistantMessage.chat2sql = predictorData.chat2sql;
+          if (predictorData.isSqlResult) assistantMessage.isSqlResult = predictorData.isSqlResult;
         }
         
         messages.push(assistantMessage);

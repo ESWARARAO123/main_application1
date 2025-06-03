@@ -444,8 +444,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     }
   };
 
-  // Determine if this is a predictor message
+  // Determine message type
   const isPredictorMessage = message.predictor || message.predictions || message.isUserCommand;
+  const isChat2SqlMessage = message.chat2sql || message.isSqlResult || message.isSqlQuery;
   
   // Get appropriate styles based on message type and theme
   const getContainerStyle = () => {
@@ -874,7 +875,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                   </span>
                   <span className="sql-result-title font-medium text-blue-700 dark:text-blue-300">Database Query Result</span>
                 </div>
-                <div className="sql-result-content overflow-x-auto border border-gray-200 dark:border-gray-700 rounded p-2 bg-white dark:bg-gray-800">
+                <div style={{
+                  overflowX: 'auto',
+                  border: isDarkTheme ? '1px solid #2f374f' : '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  backgroundColor: isDarkTheme ? '#1e2333' : '#ffffff',
+                  color: isDarkTheme ? '#ffffff' : '#1f2937'
+                }}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={components}
@@ -1215,7 +1223,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                   ...components,
                   // Add styling for other markdown elements
                   p: ({node, children, ...props}) => (
-                    <p style={{marginTop: '0.75rem', marginBottom: '0.75rem'}} {...props}>
+                    <p style={{
+                      marginTop: '0.75rem', 
+                      marginBottom: '0.75rem',
+                      color: isDarkTheme ? '#ffffff' : '#1f2937'
+                    }} {...props}>
                       {children}
                     </p>
                   ),
@@ -1257,7 +1269,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                       paddingLeft: '1.5rem',
                       marginTop: '0.5rem',
                       marginBottom: '0.5rem',
-                      listStyleType: 'disc'
+                      listStyleType: 'disc',
+                      color: isDarkTheme ? '#ffffff' : '#1f2937'
                     }} {...props}>
                       {children}
                     </ul>
@@ -1267,7 +1280,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                       paddingLeft: '1.5rem',
                       marginTop: '0.5rem',
                       marginBottom: '0.5rem',
-                      listStyleType: 'decimal'
+                      listStyleType: 'decimal',
+                      color: isDarkTheme ? '#ffffff' : '#1f2937'
                     }} {...props}>
                       {children}
                     </ol>
@@ -1275,7 +1289,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                   li: ({node, children, ...props}) => (
                     <li style={{
                       marginTop: '0.25rem',
-                      marginBottom: '0.25rem'
+                      marginBottom: '0.25rem',
+                      color: isDarkTheme ? '#ffffff' : '#1f2937'
                     }} {...props}>
                       {children}
                     </li>
@@ -1345,6 +1360,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                     <td style={{
                       padding: '0.75rem',
                       borderRight: `1px solid ${isDarkTheme ? '#333' : '#e2e8f0'}`,
+                      color: isDarkTheme ? '#ffffff' : '#1f2937',
                     }} {...props}>
                       {children}
                     </td>
