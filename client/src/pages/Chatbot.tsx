@@ -508,11 +508,17 @@ const Chatbot: React.FC = () => {
         
         if (sessionId) {
           try {
-            await chatbotService.sendMessage(
+            await chatbotService.sendPredictorMessage(
               '', // Empty user message since this is AI response
               sessionId,
               meta.error ? `Error: ${meta.error}` : meta.content,
-              false
+              {
+                predictor: aiMessage.predictor,
+                predictions: aiMessage.predictions,
+                error: aiMessage.error,
+                showDownloadButton: aiMessage.showDownloadButton,
+                isServerResponse: aiMessage.isServerResponse
+              }
             );
             console.log('Predictor AI message saved to database');
           } catch (error) {
@@ -553,11 +559,13 @@ const Chatbot: React.FC = () => {
         
         if (sessionId) {
           try {
-            await chatbotService.sendMessage(
+            await chatbotService.sendPredictorMessage(
               content.trim(),
               sessionId,
               '', // Empty response since this is user message
-              false
+              {
+                isUserCommand: userMessage.isUserCommand
+              }
             );
             console.log('Predictor user command saved to database');
           } catch (error) {

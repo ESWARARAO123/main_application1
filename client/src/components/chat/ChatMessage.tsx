@@ -444,27 +444,77 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     }
   };
 
+  // Determine if this is a predictor message
+  const isPredictorMessage = message.predictor || message.predictions || message.isUserCommand;
+  
+  // Get appropriate styles based on message type and theme
+  const getContainerStyle = () => {
+    if (isPredictorMessage && isAI) {
+      return messageBubbleStyles.predictor.container;
+    }
+    return isAI ? messageBubbleStyles.ai.container : messageBubbleStyles.user.container;
+  };
+
+  const getHeaderStyle = () => {
+    if (isPredictorMessage && isAI) {
+      return messageBubbleStyles.predictor.header;
+    }
+    return isAI ? messageBubbleStyles.ai.header : messageBubbleStyles.user.header;
+  };
+
+  const getContentStyle = () => {
+    if (isPredictorMessage && isAI) {
+      // Use theme-specific styles for better visibility
+      if (isDarkTheme) {
+        return messageBubbleStyles.predictor.contentDark;
+      } else {
+        return messageBubbleStyles.predictor.contentLight;
+      }
+    }
+    return isAI ? messageBubbleStyles.ai.content : messageBubbleStyles.user.content;
+  };
+
+  const getAvatarStyle = () => {
+    if (isPredictorMessage && isAI) {
+      return messageBubbleStyles.predictor.avatar;
+    }
+    return isAI ? messageBubbleStyles.ai.avatar : messageBubbleStyles.user.avatar;
+  };
+
+  const getTimestampStyle = () => {
+    if (isPredictorMessage && isAI) {
+      return messageBubbleStyles.predictor.timestamp;
+    }
+    return isAI ? messageBubbleStyles.ai.timestamp : messageBubbleStyles.user.timestamp;
+  };
+
   return (
     <div
-      style={isAI ? messageBubbleStyles.ai.container : messageBubbleStyles.user.container}
+      style={getContainerStyle()}
       data-context-tool={hasReadContextTool ? "true" : "false"}
       data-message-id={message.id}
+      data-predictor={isPredictorMessage ? "true" : "false"}
     >
-      <div style={isAI ? messageBubbleStyles.ai.header : messageBubbleStyles.user.header}>
+      <div style={getHeaderStyle()}>
         {isAI ? (
           <>
-            <div style={messageBubbleStyles.ai.avatar}>
-              AI
+            <div style={getAvatarStyle()}>
+              {isPredictorMessage ? 'P' : 'AI'}
             </div>
             <div style={{
               fontSize: '0.875rem',
               fontWeight: 700,
-              color: 'var(--color-primary)',
+              color: isPredictorMessage ? '#4f8bff' : 'var(--color-primary)',
               marginRight: '0.5rem',
               letterSpacing: '0.025em'
             }}>
-              AI
+              {isPredictorMessage ? 'PREDICTOR' : 'AI'}
             </div>
+            {isPredictorMessage && (
+              <div style={messageBubbleStyles.predictor.badge}>
+                Predictor Result
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -478,16 +528,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
               marginRight: '0.5rem',
               letterSpacing: '0.025em'
             }}>
-              USER
+              {message.isUserCommand ? 'USER COMMAND' : 'USER'}
             </div>
           </>
         )}
-        <div style={isAI ? messageBubbleStyles.ai.timestamp : messageBubbleStyles.user.timestamp}>
+        <div style={getTimestampStyle()}>
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
 
-      <div style={isAI ? messageBubbleStyles.ai.content : messageBubbleStyles.user.content}>
+      <div style={message.error ? messageBubbleStyles.predictor.errorContent : getContentStyle()}>
         {/* File attachment for user messages */}
         {!isAI && message.fileAttachment && (
           <div style={{
@@ -846,7 +896,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                     Predictor Result
                   </span>
                 </div>
-                <div className="predictor-result-content overflow-x-auto border border-gray-200 dark:border-gray-700 rounded p-2 bg-white dark:bg-gray-800">
+                <div style={{
+                  overflowX: 'auto',
+                  border: isDarkTheme ? '1px solid #2f374f' : '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  backgroundColor: isDarkTheme ? '#1e2333' : '#ffffff',
+                  color: isDarkTheme ? '#ffffff' : '#1f2937'
+                }}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={components}
@@ -1151,9 +1208,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                 )}
               </>
             ) : (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
+              <div style={isPredictorMessage ? (isDarkTheme ? markdownStyles.predictorContainerDark : markdownStyles.predictorContainerLight) : markdownStyles.container}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
                   ...components,
                   // Add styling for other markdown elements
                   p: ({node, children, ...props}) => (
@@ -1295,6 +1353,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
               >
                 {message.content}
               </ReactMarkdown>
+              </div>
             )}
           </div>
         ) : (

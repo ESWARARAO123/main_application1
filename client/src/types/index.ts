@@ -50,6 +50,7 @@ export interface ExtendedChatMessage extends Omit<ChatMessage, 'role'> {
   showDownloadButton?: boolean; // Flag to indicate if download button should be shown
   error?: string; // Error message for failed operations
   isUserCommand?: boolean; // Flag to indicate this is a user command in predictor mode
+  isServerResponse?: boolean; // Flag to indicate this is a server response in predictor mode
 }
 
 export interface PredictionResult {

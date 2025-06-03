@@ -158,6 +158,43 @@ export const chatbotService = {
       console.error('Error in chatbotService.updateMessageSessionId:', error);
       throw error;
     }
+  },
+
+  // Send predictor message with extended data
+  sendPredictorMessage: async (
+    message: string, 
+    sessionId?: string, 
+    response?: string, 
+    predictorData?: {
+      predictor?: boolean;
+      predictions?: any[];
+      error?: string;
+      showDownloadButton?: boolean;
+      isUserCommand?: boolean;
+      isServerResponse?: boolean;
+    }
+  ): Promise<ChatMessageResponse> => {
+    try {
+      console.log('Sending predictor message to database:', {
+        messageLength: message.length,
+        responseLength: response ? response.length : 0,
+        sessionId,
+        predictorData
+      });
+
+      const apiResponse = await api.post('/chatbot/predictor-message', {
+        message,
+        sessionId,
+        response,
+        predictorData
+      });
+
+      console.log('Predictor message saved successfully:', apiResponse.data);
+      return apiResponse.data;
+    } catch (error) {
+      console.error('Error in chatbotService.sendPredictorMessage:', error);
+      throw error;
+    }
   }
 };
 

@@ -165,7 +165,7 @@ router.get('/sessions/:sessionId', isAuthenticated, async (req, res) => {
 
     // Get messages for session with pagination
     const messagesResult = await pool.query(
-      `SELECT id, message, response, timestamp, is_context_update
+      `SELECT id, message, response, timestamp, is_context_update, predictor_data
        FROM messages
        WHERE session_id = $1
        ORDER BY timestamp DESC
@@ -177,25 +177,53 @@ router.get('/sessions/:sessionId', isAuthenticated, async (req, res) => {
     const formattedMessages = messagesResult.rows.map(row => {
       const messages = [];
       
+      // Parse predictor data if available
+      let predictorData = null;
+      if (row.predictor_data) {
+        try {
+          predictorData = typeof row.predictor_data === 'string' ? JSON.parse(row.predictor_data) : row.predictor_data;
+        } catch (error) {
+          console.error('Error parsing predictor data:', error);
+        }
+      }
+
       // Only add user message if it's not a context update and has content
       if (!row.is_context_update && row.message && row.message.trim()) {
-        messages.push({
+        const userMessage = {
           id: `${row.id}-user`,
           role: 'user',
           content: row.message,
           timestamp: row.timestamp
-        });
+        };
+        
+        // Add predictor data to user message if available
+        if (predictorData && predictorData.isUserCommand) {
+          userMessage.isUserCommand = predictorData.isUserCommand;
+        }
+        
+        messages.push(userMessage);
       }
       
       // Always add assistant/system message if there's a response
       if (row.response && row.response.trim()) {
-        messages.push({
+        const assistantMessage = {
           id: `${row.id}-assistant`,
           role: row.is_context_update ? 'system' : 'assistant',  // Context updates are system messages
           content: row.response,
           timestamp: row.timestamp,
           isContextUpdate: row.is_context_update || false
-        });
+        };
+        
+        // Add predictor data to assistant message if available
+        if (predictorData) {
+          if (predictorData.predictor) assistantMessage.predictor = predictorData.predictor;
+          if (predictorData.predictions) assistantMessage.predictions = predictorData.predictions;
+          if (predictorData.error) assistantMessage.error = predictorData.error;
+          if (predictorData.showDownloadButton) assistantMessage.showDownloadButton = predictorData.showDownloadButton;
+          if (predictorData.isServerResponse) assistantMessage.isServerResponse = predictorData.isServerResponse;
+        }
+        
+        messages.push(assistantMessage);
       }
       
       return messages;
@@ -413,6 +441,74 @@ router.post('/message', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error processing message:', error);
     res.status(500).json({ error: 'Error processing message' });
+  }
+});
+
+// Send predictor message with extended data
+router.post('/predictor-message', isAuthenticated, async (req, res) => {
+  const { message, sessionId, response, predictorData } = req.body;
+  const userId = req.session.userId;
+
+  if (!message && !response) {
+    return res.status(400).json({ error: 'Message or response is required' });
+  }
+
+  try {
+    // Verify session if provided
+    let activeSessionId = sessionId;
+
+    if (sessionId) {
+      const sessionCheck = await pool.query(
+        'SELECT id FROM chat_sessions WHERE id = $1 AND user_id = $2',
+        [sessionId, userId]
+      );
+
+      if (sessionCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Chat session not found' });
+      }
+    } else {
+      // Create a new session if none provided
+      const newSession = await pool.query(
+        'INSERT INTO chat_sessions (id, user_id, title) VALUES ($1, $2, $3) RETURNING id',
+        [uuidv4(), userId, "Predictor Session"]
+      );
+
+      activeSessionId = newSession.rows[0].id;
+    }
+
+    console.log(`Saving predictor message to database - User: ${userId}, Session: ${activeSessionId}`);
+    console.log(`Message length: ${message ? message.length : 0}, Response length: ${response ? response.length : 0}`);
+    console.log('Predictor data:', predictorData);
+
+    // Store the message with predictor data
+    const result = await pool.query(
+      `INSERT INTO messages (user_id, message, response, session_id, timestamp, predictor_data) 
+       VALUES ($1, $2, $3, $4, NOW(), $5) RETURNING id, timestamp`,
+      [userId, message || '', response || '', activeSessionId, JSON.stringify(predictorData)]
+    );
+
+    const messageId = result.rows[0].id;
+    const timestamp = result.rows[0].timestamp;
+
+    console.log(`Predictor message saved successfully with ID: ${messageId}`);
+
+    // Update the session's last_message_timestamp
+    await pool.query(
+      'UPDATE chat_sessions SET last_message_timestamp = NOW() WHERE id = $1',
+      [activeSessionId]
+    );
+
+    // Return formatted message data
+    res.json({
+      id: messageId,
+      content: response || message,
+      timestamp,
+      sessionId: activeSessionId,
+      predictorData
+    });
+  } catch (error) {
+    console.error('Error processing predictor message:', error);
+    res.status(500).json({ error: 'Error processing predictor message' });
   }
 });
 
