@@ -65,11 +65,67 @@ export const useChatSessions = () => {
       setTotalMessages(total);
       setHasMoreMessages(offset + fetchedMessages.length < total);
 
-      // Convert standard ChatMessage to ExtendedChatMessage
-      const extendedMessages = fetchedMessages.map(msg => ({
-        ...msg,
-        role: msg.role as 'user' | 'assistant' | 'system'
-      }));
+      // Convert standard ChatMessage to ExtendedChatMessage and merge with predictor data
+      const extendedMessages = fetchedMessages.map(msg => {
+        const baseMessage = {
+          ...msg,
+          role: msg.role as 'user' | 'assistant' | 'system'
+        };
+        
+        // Try to restore predictor data from localStorage
+        try {
+          const predictorKey = `predictor_messages_${sessionId}`;
+          const predictorData = localStorage.getItem(predictorKey);
+          if (predictorData) {
+            const predictorMessages = JSON.parse(predictorData);
+            
+            // Try multiple matching strategies
+            let matchingPredictorMsg = null;
+            
+            // Strategy 1: Exact content and close timestamp match
+            matchingPredictorMsg = predictorMessages.find((pMsg: any) => 
+              pMsg.content === msg.content && 
+              Math.abs(new Date(pMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 10000 // 10 second tolerance
+            );
+            
+            // Strategy 2: If no exact match, try matching by role and approximate timestamp
+            if (!matchingPredictorMsg) {
+              matchingPredictorMsg = predictorMessages.find((pMsg: any) => 
+                pMsg.role === msg.role && 
+                Math.abs(new Date(pMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 30000 && // 30 second tolerance
+                (pMsg.predictor || pMsg.predictions || pMsg.isUserCommand) // Has predictor-specific data
+              );
+            }
+            
+            // Strategy 3: For predictor messages, try matching by content similarity
+            if (!matchingPredictorMsg && msg.role === 'assistant') {
+              matchingPredictorMsg = predictorMessages.find((pMsg: any) => 
+                pMsg.role === 'assistant' && 
+                pMsg.predictor && 
+                (pMsg.content.includes('prediction') || pMsg.content.includes('route') || pMsg.content.includes('slack')) &&
+                Math.abs(new Date(pMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 60000 // 1 minute tolerance
+              );
+            }
+            
+            if (matchingPredictorMsg) {
+              console.log('Restored predictor data for message:', msg.id, matchingPredictorMsg);
+              return {
+                ...baseMessage,
+                predictor: matchingPredictorMsg.predictor,
+                predictions: matchingPredictorMsg.predictions,
+                error: matchingPredictorMsg.error,
+                showDownloadButton: matchingPredictorMsg.showDownloadButton,
+                isUserCommand: matchingPredictorMsg.isUserCommand,
+                isServerResponse: matchingPredictorMsg.isServerResponse
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error restoring predictor data for message:', error);
+        }
+        
+        return baseMessage;
+      });
 
       if (append) {
         setMessages(prev => [...extendedMessages, ...prev]);
@@ -104,8 +160,10 @@ export const useChatSessions = () => {
       setMessageOffset(0);
       setHasMoreMessages(false);
       setTotalMessages(0);
+      return newSession; // Return the created session
     } catch (error) {
       console.error('Error creating new session:', error);
+      throw error; // Re-throw the error so callers can handle it
     }
   };
 

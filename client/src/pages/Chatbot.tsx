@@ -99,12 +99,78 @@ const Chatbot: React.FC = () => {
   // MCP Server selector state
   const [showServerSelector, setShowServerSelector] = useState(false);
 
-  // Chat2SQL state
-  const [isChat2SqlEnabled, setIsChat2SqlEnabled] = useState(false);
+  // Chat2SQL state - Added with persistence
+  const [isChat2SqlEnabled, setIsChat2SqlEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chat2sql_mode_enabled');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
 
-  // Predictor state - Added
-  const [isPredictorEnabled, setIsPredictorEnabled] = useState(false);
+  // Predictor state - Added with persistence
+  const [isPredictorEnabled, setIsPredictorEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('predictor_mode_enabled');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
   const [showTrainingForm, setShowTrainingForm] = useState(false);
+
+  // Helper functions for predictor message persistence
+  const savePredictorMessage = (sessionId: string, message: ExtendedChatMessage) => {
+    try {
+      const key = `predictor_messages_${sessionId}`;
+      const existing = localStorage.getItem(key);
+      let messages = existing ? JSON.parse(existing) : [];
+      
+      // Add the new message
+      messages.push({
+        ...message,
+        timestamp: message.timestamp.toISOString() // Convert Date to string for storage
+      });
+      
+      // Keep only the last 50 messages per session to prevent localStorage bloat
+      if (messages.length > 50) {
+        messages = messages.slice(-50);
+      }
+      
+      localStorage.setItem(key, JSON.stringify(messages));
+      console.log('Predictor message saved to localStorage:', message.id);
+    } catch (error) {
+      console.error('Error saving predictor message to localStorage:', error);
+    }
+  };
+
+  const loadPredictorMessages = (sessionId: string): ExtendedChatMessage[] => {
+    try {
+      const key = `predictor_messages_${sessionId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const messages = JSON.parse(stored);
+        return messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp) // Convert string back to Date
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading predictor messages from localStorage:', error);
+    }
+    return [];
+  };
+
+  const clearPredictorMessages = (sessionId: string) => {
+    try {
+      const key = `predictor_messages_${sessionId}`;
+      localStorage.removeItem(key);
+      console.log('Predictor messages cleared for session:', sessionId);
+    } catch (error) {
+      console.error('Error clearing predictor messages:', error);
+    }
+  };
 
   // Enhanced MCP helper functions
   const selectServer = async (serverId: string) => {
@@ -156,7 +222,15 @@ const Chatbot: React.FC = () => {
 
   // Toggle Chat2SQL mode
   const handleToggleChat2Sql = () => {
-    setIsChat2SqlEnabled(prev => !prev);
+    setIsChat2SqlEnabled(prev => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem('chat2sql_mode_enabled', JSON.stringify(newValue));
+      } catch (error) {
+        console.error('Error saving Chat2SQL mode to localStorage:', error);
+      }
+      return newValue;
+    });
   };
 
   // Listen for predictor messages from TrainingForm - Added
@@ -342,6 +416,23 @@ const Chatbot: React.FC = () => {
     };
   }, [activeSessionId, fetchSessionMessages]);
 
+  // Load predictor messages when session changes
+  useEffect(() => {
+    if (activeSessionId && isPredictorEnabled) {
+      console.log('Loading predictor messages for session:', activeSessionId);
+      const predictorMessages = loadPredictorMessages(activeSessionId);
+      if (predictorMessages.length > 0) {
+        console.log(`Found ${predictorMessages.length} predictor messages in localStorage`);
+        // Merge predictor messages with existing messages, avoiding duplicates
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(msg => msg.id));
+          const newMessages = predictorMessages.filter(msg => !existingIds.has(msg.id));
+          return [...prev, ...newMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        });
+      }
+    }
+  }, [activeSessionId, isPredictorEnabled]);
+
   // WebSocket reconnection
   const { connected: wsConnected, reconnect: wsReconnect } = useWebSocket();
   useEffect(() => {
@@ -399,6 +490,36 @@ const Chatbot: React.FC = () => {
         
         console.log('Predictor result message:', aiMessage);
         setMessages(prev => [...prev, aiMessage]);
+        
+        // Save predictor AI response to database and localStorage
+        let sessionId = activeSessionId;
+        if (!sessionId) {
+          // Create a new session if none exists
+          try {
+            const newSession = await createNewSession('Predictor Session');
+            sessionId = newSession.id;
+            setActiveSessionId(sessionId);
+            await fetchSessions(); // Refresh the sessions list
+            console.log('Created new session for predictor:', sessionId);
+          } catch (error) {
+            console.error('Error creating new session for predictor:', error);
+          }
+        }
+        
+        if (sessionId) {
+          try {
+            await chatbotService.sendMessage(
+              '', // Empty user message since this is AI response
+              sessionId,
+              meta.error ? `Error: ${meta.error}` : meta.content,
+              false
+            );
+            console.log('Predictor AI message saved to database');
+          } catch (error) {
+            console.error('Error saving predictor AI message to database:', error);
+          }
+          savePredictorMessage(sessionId, aiMessage);
+        }
         return;
       }
       
@@ -414,6 +535,36 @@ const Chatbot: React.FC = () => {
 
         console.log('User predictor command message:', userMessage);
         setMessages(prev => [...prev, userMessage]);
+        
+        // Save predictor user command to database and localStorage
+        let sessionId = activeSessionId;
+        if (!sessionId) {
+          // Create a new session if none exists
+          try {
+            const newSession = await createNewSession('Predictor Session');
+            sessionId = newSession.id;
+            setActiveSessionId(sessionId);
+            await fetchSessions(); // Refresh the sessions list
+            console.log('Created new session for predictor:', sessionId);
+          } catch (error) {
+            console.error('Error creating new session for predictor:', error);
+          }
+        }
+        
+        if (sessionId) {
+          try {
+            await chatbotService.sendMessage(
+              content.trim(),
+              sessionId,
+              '', // Empty response since this is user message
+              false
+            );
+            console.log('Predictor user command saved to database');
+          } catch (error) {
+            console.error('Error saving predictor user command to database:', error);
+          }
+          savePredictorMessage(sessionId, userMessage);
+        }
         return;
       }
 
@@ -435,6 +586,35 @@ const Chatbot: React.FC = () => {
         
         console.log('SQL result message:', aiMessage);
         setMessages(prev => [...prev, aiMessage]);
+        
+        // Save Chat2SQL AI response to database
+        let sessionId = activeSessionId;
+        if (!sessionId) {
+          // Create a new session if none exists
+          try {
+            const newSession = await createNewSession('Chat2SQL Session');
+            sessionId = newSession.id;
+            setActiveSessionId(sessionId);
+            await fetchSessions(); // Refresh the sessions list
+            console.log('Created new session for Chat2SQL:', sessionId);
+          } catch (error) {
+            console.error('Error creating new session for Chat2SQL:', error);
+          }
+        }
+        
+        if (sessionId) {
+          try {
+            await chatbotService.sendMessage(
+              '', // Empty user message since this is AI response
+              sessionId,
+              meta.error ? `Error: ${meta.error}` : meta.content,
+              false
+            );
+            console.log('Chat2SQL AI message saved to database');
+          } catch (error) {
+            console.error('Error saving Chat2SQL AI message to database:', error);
+          }
+        }
         return;
       }
       
@@ -450,11 +630,32 @@ const Chatbot: React.FC = () => {
         console.log('User SQL query message:', userMessage);
         setMessages(prev => [...prev, userMessage]);
 
-        if (activeSessionId) {
+        // Save Chat2SQL user message to database
+        let sessionId = activeSessionId;
+        if (!sessionId) {
+          // Create a new session if none exists
           try {
-            await chatbotService.updateMessageSessionId('temp-session-id', activeSessionId);
+            const newSession = await createNewSession('Chat2SQL Session');
+            sessionId = newSession.id;
+            setActiveSessionId(sessionId);
+            await fetchSessions(); // Refresh the sessions list
+            console.log('Created new session for Chat2SQL:', sessionId);
           } catch (error) {
-            console.error('Error updating session ID in database:', error);
+            console.error('Error creating new session for Chat2SQL:', error);
+          }
+        }
+        
+        if (sessionId) {
+          try {
+            await chatbotService.sendMessage(
+              content.trim(),
+              sessionId,
+              '', // Empty response since this is user message
+              false
+            );
+            console.log('Chat2SQL user message saved to database');
+          } catch (error) {
+            console.error('Error saving Chat2SQL user message to database:', error);
           }
         }
 
@@ -467,8 +668,48 @@ const Chatbot: React.FC = () => {
     // Special handling for read_context command
     if (content.trim().toLowerCase() === 'read_context') {
       console.log('Detected exact read_context command, triggering context tool directly');
+      
+      // Create user message for the command
+      const userMessage: ExtendedChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: content.trim(),
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Create AI response message
       const aiMessage = createContextToolMessage();
       setMessages(prev => [...prev, aiMessage]);
+      
+      // Save both messages to database
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        try {
+          const newSession = await createNewSession('Context Session');
+          sessionId = newSession.id;
+          setActiveSessionId(sessionId);
+          await fetchSessions();
+          console.log('Created new session for context:', sessionId);
+        } catch (error) {
+          console.error('Error creating new session for context:', error);
+        }
+      }
+      
+      if (sessionId) {
+        try {
+          await chatbotService.sendMessage(
+            content.trim(),
+            sessionId,
+            aiMessage.content,
+            false
+          );
+          console.log('Context command and response saved to database');
+        } catch (error) {
+          console.error('Error saving context messages to database:', error);
+        }
+      }
+      
       return;
     }
     
@@ -482,6 +723,35 @@ const Chatbot: React.FC = () => {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, userMessage]);
+
+        // Save MCP user message to database
+        let sessionId = activeSessionId;
+        if (!sessionId) {
+          // Create a new session if none exists
+          try {
+            const newSession = await createNewSession('MCP Session');
+            sessionId = newSession.id;
+            setActiveSessionId(sessionId);
+            await fetchSessions(); // Refresh the sessions list
+            console.log('Created new session for MCP:', sessionId);
+          } catch (error) {
+            console.error('Error creating new session for MCP:', error);
+          }
+        }
+        
+        if (sessionId) {
+          try {
+            await chatbotService.sendMessage(
+              content.trim(),
+              sessionId,
+              '', // Empty response since this is user message
+              false
+            );
+            console.log('MCP user message saved to database');
+          } catch (error) {
+            console.error('Error saving MCP user message to database:', error);
+          }
+        }
 
         await handleMCPChatMessage(
           content,
@@ -500,12 +770,28 @@ const Chatbot: React.FC = () => {
         return;
       } catch (error: any) {
         console.error('Error using MCP chat mode:', error);
-        setMessages(prev => [...prev, {
+        const errorMessage: ExtendedChatMessage = {
           id: `error-${Date.now()}`,
           role: 'assistant',
           content: `Error: ${error.message}. Falling back to normal chat.`,
           timestamp: new Date()
-        }]);
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        
+        // Save MCP error message to database
+        if (activeSessionId) {
+          try {
+            await chatbotService.sendMessage(
+              '',
+              activeSessionId,
+              errorMessage.content,
+              false
+            );
+            console.log('MCP error message saved to database');
+          } catch (dbError) {
+            console.error('Error saving MCP error message to database:', dbError);
+          }
+        }
       }
     }
 
@@ -739,6 +1025,12 @@ const Chatbot: React.FC = () => {
               onTogglePredictor={() => {
                 setIsPredictorEnabled((prev) => {
                   const newValue = !prev;
+                  try {
+                    localStorage.setItem('predictor_mode_enabled', JSON.stringify(newValue));
+                  } catch (error) {
+                    console.error('Error saving predictor mode to localStorage:', error);
+                  }
+                  
                   if (newValue) {
                     // Send welcome message when predictor is activated
                     const welcomeMessage = {

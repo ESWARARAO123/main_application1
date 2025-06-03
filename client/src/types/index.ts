@@ -53,21 +53,13 @@ export interface ExtendedChatMessage extends Omit<ChatMessage, 'role'> {
 }
 
 export interface PredictionResult {
-  beginpoint: string;
+  startpoint: string;
   endpoint: string;
   place_slack: number;
   cts_slack: number;
   predicted_route_slack: number;
-  fanout: number;
-  netcount: number;
-  netdelay: number;
-  invdelay: number;
-  bufdelay: number;
-  seqdelay: number;
-  skew: number;
-  combodelay: number;
-  wirelength: number;
-  slack: number;
+  // Legacy fields for backward compatibility
+  beginpoint?: string;
 }
 
 export interface ChatSession {

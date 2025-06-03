@@ -127,12 +127,12 @@ I'm ready to help you train machine learning models and generate route predictio
 🔄 **Workflow:**
 1. **Train** → Use Place + CTS + Route tables to train the neural network model
 2. **Predict** → Generate Route table predictions from Place + CTS data
-3. **Download** → Export prediction results as CSV
+3. **Download** → Use the download button in prediction results
 
 💬 **Quick Start Commands:**
 • Type **"train"** to start model training
 • Type **"predict"** to generate predictions (after training)
-• Type **"download"** to export results
+• Click **Download** button in results to export CSV
 
 🎯 **What would you like to do?**`;
           
@@ -300,51 +300,9 @@ The model is now ready for predictions! Type **"predict"** to generate route tab
           } else {
             throw new Error(result.message || 'Prediction failed');
           }
-        } else if (command === 'download') {
-          // Handle download command for prediction results
-          try {
-            const response = await fetch('http://127.0.0.1:8088/results/download?format=csv', {
-              method: 'GET',
-            });
-            
-            if (!response.ok) {
-              throw new Error('No prediction results available for download');
-            }
-            
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            
-            // Create a temporary link to trigger download
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'prediction_results.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            const downloadMessage = `Prediction results downloaded as CSV file.`;
-            
-            onSendMessage(downloadMessage, undefined, {
-              predictor: true,
-              isServerResponse: true,
-              content: downloadMessage,
-              timestamp: new Date().toISOString(),
-              id: `predictor-download-${Date.now()}`,
-            });
-          } catch (downloadError) {
-            const errorMessage = `Download failed: ${downloadError instanceof Error ? downloadError.message : 'No results available'}`;
-            onSendMessage(errorMessage, undefined, {
-              predictor: true,
-              isServerResponse: true,
-              content: errorMessage,
-              timestamp: new Date().toISOString(),
-              id: `predictor-download-error-${Date.now()}`,
-            });
-          }
         } else {
           // Unknown command
-          const errorMessage = `Unknown predictor command: "${message}". Available commands: "train", "predict", "download".`;
+          const errorMessage = `Unknown predictor command: "${message}". Available commands: "train", "predict".`;
           onSendMessage(errorMessage, undefined, {
             predictor: true,
             isServerResponse: true,

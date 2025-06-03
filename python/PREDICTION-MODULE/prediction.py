@@ -13,9 +13,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import logging
 from datetime import datetime
 import psutil
@@ -459,8 +459,20 @@ async def predict(request: PredictRequest):
         
         # Generate route predictions using the trained models
         try:
-            # Extract features from place data
+            # Extract and engineer features from place data (same as training)
             place_features = place_data[base_feature_columns].astype(float)
+            
+            # Apply same feature engineering as training
+            place_features['delay_ratio'] = place_features['netdelay'] / (place_features['invdelay'] + 1e-8)
+            place_features['total_delay'] = place_features['netdelay'] + place_features['invdelay'] + place_features['bufdelay']
+            place_features['slack_density'] = place_features['slack'] / (place_features['wirelength'] + 1e-8)
+            place_features['fanout_delay_interaction'] = place_features['fanout'] * place_features['netdelay']
+            place_features['skew_slack_ratio'] = place_features['skew'] / (abs(place_features['slack']) + 1e-8)
+            
+            # Remove any infinite or NaN values
+            place_features = place_features.replace([np.inf, -np.inf], np.nan)
+            place_features = place_features.fillna(place_features.median())
+            
             place_features_scaled = scaler_place.transform(place_features)
             
             # Predict CTS slack from place features
@@ -475,17 +487,31 @@ async def predict(request: PredictRequest):
             
             # Generate route predictions if the route model is available
             if model_combined_to_route is not None and scaler_combined is not None:
-                # Create combined features for Route prediction
+                # Create combined features for Route prediction (with engineered features)
+                place_feature_names = [f'place_{col}' for col in place_features.columns]
                 place_features_renamed = pd.DataFrame(
                     place_features.values,
-                    columns=[f'place_{col}' for col in base_feature_columns]
+                    columns=place_feature_names
                 )
                 
-                # Use actual CTS data for better predictions (consistent with training)
+                # Use actual CTS data and apply same feature engineering
                 cts_features = cts_data[base_feature_columns].copy()
+                
+                # Apply same feature engineering to CTS data
+                cts_features['delay_ratio'] = cts_features['netdelay'] / (cts_features['invdelay'] + 1e-8)
+                cts_features['total_delay'] = cts_features['netdelay'] + cts_features['invdelay'] + cts_features['bufdelay']
+                cts_features['slack_density'] = cts_features['slack'] / (cts_features['wirelength'] + 1e-8)
+                cts_features['fanout_delay_interaction'] = cts_features['fanout'] * cts_features['netdelay']
+                cts_features['skew_slack_ratio'] = cts_features['skew'] / (abs(cts_features['slack']) + 1e-8)
+                
+                # Remove any infinite or NaN values
+                cts_features = cts_features.replace([np.inf, -np.inf], np.nan)
+                cts_features = cts_features.fillna(cts_features.median())
+                
+                cts_feature_names = [f'cts_{col}' for col in cts_features.columns]
                 cts_features_renamed = pd.DataFrame(
                     cts_features.values,
-                    columns=[f'cts_{col}' for col in base_feature_columns]
+                    columns=cts_feature_names
                 )
                 
                 # Combine features
@@ -512,25 +538,15 @@ async def predict(request: PredictRequest):
                 
                 route_predictions = np.array(route_predictions)
             
-            # Create the predicted route table
+            # Create the predicted route table with required columns only
             route_table_data = []
             for i in range(len(place_data)):
                 route_table_data.append({
-                    'beginpoint': str(place_data.iloc[i]['beginpoint']),
+                    'startpoint': str(place_data.iloc[i]['beginpoint']),  # Renamed from beginpoint
                     'endpoint': str(place_data.iloc[i]['endpoint']),
                     'place_slack': float(place_data.iloc[i]['slack']) if 'slack' in place_data.columns else 0.0,
                     'cts_slack': float(cts_data.iloc[i]['slack']),
-                    'predicted_route_slack': float(route_predictions[i]),
-                    'fanout': float(place_data.iloc[i]['fanout']),
-                    'netcount': float(place_data.iloc[i]['netcount']),
-                    'netdelay': float(place_data.iloc[i]['netdelay']),
-                    'invdelay': float(place_data.iloc[i]['invdelay']),
-                    'bufdelay': float(place_data.iloc[i]['bufdelay']),
-                    'seqdelay': float(place_data.iloc[i]['seqdelay']),
-                    'skew': float(place_data.iloc[i]['skew']),
-                    'combodelay': float(place_data.iloc[i]['combodelay']),
-                    'wirelength': float(place_data.iloc[i]['wirelength']),
-                    'slack': float(route_predictions[i])  # Main slack column for the route table
+                    'predicted_route_slack': float(route_predictions[i])
                 })
             
             result_df = pd.DataFrame(route_table_data)
@@ -573,8 +589,9 @@ async def predict(request: PredictRequest):
             logging.error(f"[Predictor] Error setting up database: {setup_error}")
             # Continue even if setup fails
         
-        # Store results in the database - force this to happen by using a transaction
+        # Store results in the database with incremental table names
         db_storage_success = False
+        prediction_table_name = None
         try:
             logging.info(f"[Predictor] Storing {len(result_df)} prediction results in database")
             # Create a direct connection to ensure this works
@@ -582,9 +599,35 @@ async def predict(request: PredictRequest):
             
             with db_connection.connect() as connection:
                 with connection.begin():
-                    # First verify the table exists
-                    connection.execute(text("""
-                        CREATE TABLE IF NOT EXISTS prediction_results (
+                    # Find the next prediction number by checking existing tables
+                    result = connection.execute(text("""
+                        SELECT table_name FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name LIKE 'prediction_%'
+                        AND table_name ~ '^prediction_[0-9]+$'
+                        ORDER BY table_name
+                    """))
+                    
+                    existing_tables = [row[0] for row in result.fetchall()]
+                    
+                    # Find the highest prediction number
+                    max_num = 0
+                    for table in existing_tables:
+                        try:
+                            num = int(table.split('_')[1])
+                            max_num = max(max_num, num)
+                        except (IndexError, ValueError):
+                            continue
+                    
+                    # Create the next prediction table
+                    next_num = max_num + 1
+                    prediction_table_name = f"prediction_{next_num}"
+                    
+                    logging.info(f"[Predictor] Creating new prediction table: {prediction_table_name}")
+                    
+                    # Create the new prediction table
+                    connection.execute(text(f"""
+                        CREATE TABLE {prediction_table_name} (
                             id SERIAL PRIMARY KEY,
                             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             beginpoint TEXT,
@@ -605,18 +648,14 @@ async def predict(request: PredictRequest):
                         )
                     """))
                     
-                    # Count how many records we have before inserting
-                    before_count = connection.execute(text("SELECT COUNT(*) FROM prediction_results")).scalar()
-                    logging.info(f"[Predictor] Before insertion, database has {before_count} records")
-                    
                     # Insert records in smaller batches to avoid timeout issues
                     records_inserted = 0
                     batch_size = 100  # Smaller batch size for more reliable insertion
                     for i in range(0, len(result_df), batch_size):
                         batch = result_df.iloc[i:i+batch_size]
                         for _, row in batch.iterrows():
-                            connection.execute(text("""
-                                INSERT INTO prediction_results 
+                            connection.execute(text(f"""
+                                INSERT INTO {prediction_table_name} 
                                 (beginpoint, endpoint, place_slack, cts_slack, predicted_route_slack, 
                                  fanout, netcount, netdelay, invdelay, bufdelay, seqdelay, skew, combodelay, wirelength, slack)
                                 VALUES (:beginpoint, :endpoint, :place_slack, :cts_slack, :predicted_route_slack,
@@ -642,16 +681,16 @@ async def predict(request: PredictRequest):
                         records_inserted += len(batch)
                         logging.info(f"[Predictor] Inserted batch of {len(batch)} records, total {records_inserted} so far")
                     
-                    # Count how many records we have after inserting
-                    after_count = connection.execute(text("SELECT COUNT(*) FROM prediction_results")).scalar()
-                    logging.info(f"[Predictor] After insertion, database has {after_count} records")
+                    # Count how many records we have in the new table
+                    after_count = connection.execute(text(f"SELECT COUNT(*) FROM {prediction_table_name}")).scalar()
+                    logging.info(f"[Predictor] New table {prediction_table_name} has {after_count} records")
                     
                     # Verify that records were actually inserted
-                    if after_count > before_count:
+                    if after_count == records_inserted:
                         db_storage_success = True
-                        logging.info(f"[Predictor] Successfully stored {after_count - before_count} new records in database")
+                        logging.info(f"[Predictor] Successfully stored {after_count} records in new table {prediction_table_name}")
                     else:
-                        logging.error(f"[Predictor] Database count did not increase after insertion: before={before_count}, after={after_count}")
+                        logging.error(f"[Predictor] Record count mismatch: expected {records_inserted}, got {after_count}")
             
             # Double-check that storage was successful
             if db_storage_success:
@@ -678,11 +717,12 @@ async def predict(request: PredictRequest):
         # Return all result data and metrics
         return {
             "status": "success",
-            "message": f"Route prediction completed using Place table: {request.place_table} and CTS table: {request.cts_table}. Database storage {'successful' if db_storage_success else 'failed'}",
+            "message": f"Route prediction completed using Place table: {request.place_table} and CTS table: {request.cts_table}. Results stored in table: {prediction_table_name if prediction_table_name else 'storage failed'}",
             "data": serializable_data,  # Return ALL rows as list of dictionaries with serializable values
             "metrics": metrics,
             "endpoint_info": endpoint_info,
             "predicted_table_name": f"predicted_route_from_{request.place_table}_{request.cts_table}",
+            "output_table_name": prediction_table_name,
             "total_predictions": len(serializable_data)
         }
     except HTTPException as he:
@@ -1387,9 +1427,20 @@ async def train_model(request: TrainRequest):
         if train_route_model and route_data is not None:
             route_data = route_data.sort_values(by='normalized_endpoint')
         
-        # Prepare features for Place to CTS model
+        # Enhanced feature engineering for better accuracy
         place_features = place_data[base_feature_columns].copy()
         cts_target = cts_data['slack']
+        
+        # Add engineered features for better prediction accuracy
+        place_features['delay_ratio'] = place_features['netdelay'] / (place_features['invdelay'] + 1e-8)
+        place_features['total_delay'] = place_features['netdelay'] + place_features['invdelay'] + place_features['bufdelay']
+        place_features['slack_density'] = place_features['slack'] / (place_features['wirelength'] + 1e-8)
+        place_features['fanout_delay_interaction'] = place_features['fanout'] * place_features['netdelay']
+        place_features['skew_slack_ratio'] = place_features['skew'] / (abs(place_features['slack']) + 1e-8)
+        
+        # Remove any infinite or NaN values
+        place_features = place_features.replace([np.inf, -np.inf], np.nan)
+        place_features = place_features.fillna(place_features.median())
         
         # Scale features for Place to CTS
         scaler_place = StandardScaler()
@@ -1400,24 +1451,45 @@ async def train_model(request: TrainRequest):
             place_features_scaled, cts_target, test_size=0.3, random_state=42
         )
         
-        # Train Place to CTS model
+        # Enhanced Place to CTS model for higher accuracy
         model_place_to_cts = Sequential([
-            Dense(256, input_dim=X_train_place_cts.shape[1], activation='relu'),
-            Dropout(0.3),
+            # Input layer with batch normalization
+            Dense(512, input_dim=X_train_place_cts.shape[1], activation='relu'),
+            BatchNormalization(),
+            Dropout(0.2),
+            
+            # Hidden layers
+            Dense(256, activation='relu'),
+            BatchNormalization(),
+            Dropout(0.2),
+            
             Dense(128, activation='relu'),
-            Dropout(0.3),
+            BatchNormalization(),
+            Dropout(0.15),
+            
             Dense(64, activation='relu'),
+            Dropout(0.1),
+            
+            # Output layer
             Dense(1)
         ])
         
-        model_place_to_cts.compile(optimizer=Adam(learning_rate=0.001), loss='huber')
-        es = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        # Use adaptive learning rate with ReduceLROnPlateau (more flexible)
+        model_place_to_cts.compile(
+            optimizer=Adam(learning_rate=0.001), 
+            loss='mse',
+            metrics=['mae', 'mse']
+        )
+        
+        es_cts = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True, min_delta=1e-6)
+        reduce_lr_cts = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=8, min_lr=1e-7, verbose=0)
+        
         history_cts = model_place_to_cts.fit(
             X_train_place_cts, y_train_place_cts,
             validation_split=0.2,
-            epochs=50,
-            callbacks=[es],
-            batch_size=32,
+            epochs=100,  # Increased epochs
+            callbacks=[es_cts, reduce_lr_cts],
+            batch_size=16,  # Smaller batch size
             verbose=0
         )
         
@@ -1432,13 +1504,25 @@ async def train_model(request: TrainRequest):
         
         # Train Route model only if route table is available
         if train_route_model and route_data is not None:
-            # Prepare combined features for Route prediction
-            place_feature_names = [f'place_{col}' for col in base_feature_columns]
-            cts_feature_names = [f'cts_{col}' for col in base_feature_columns]
+            # Prepare combined features for Route prediction (including engineered features)
+            place_feature_names = [f'place_{col}' for col in place_features.columns]
+            cts_features = cts_data[base_feature_columns].copy()
+            
+            # Apply same feature engineering to CTS data
+            cts_features['delay_ratio'] = cts_features['netdelay'] / (cts_features['invdelay'] + 1e-8)
+            cts_features['total_delay'] = cts_features['netdelay'] + cts_features['invdelay'] + cts_features['bufdelay']
+            cts_features['slack_density'] = cts_features['slack'] / (cts_features['wirelength'] + 1e-8)
+            cts_features['fanout_delay_interaction'] = cts_features['fanout'] * cts_features['netdelay']
+            cts_features['skew_slack_ratio'] = cts_features['skew'] / (abs(cts_features['slack']) + 1e-8)
+            
+            # Remove any infinite or NaN values
+            cts_features = cts_features.replace([np.inf, -np.inf], np.nan)
+            cts_features = cts_features.fillna(cts_features.median())
+            
+            cts_feature_names = [f'cts_{col}' for col in cts_features.columns]
             
             # Create combined features
             place_features_renamed = pd.DataFrame(place_features.values, columns=place_feature_names)
-            cts_features = cts_data[base_feature_columns].copy()
             cts_features_renamed = pd.DataFrame(cts_features.values, columns=cts_feature_names)
             combined_features = pd.concat([place_features_renamed, cts_features_renamed], axis=1)
             route_target = route_data['slack']
@@ -1452,24 +1536,50 @@ async def train_model(request: TrainRequest):
                 combined_features_scaled, route_target, test_size=0.3, random_state=42
             )
             
-            # Train Route model
+            # Enhanced Route model with improved architecture for higher accuracy
             model_combined_to_route = Sequential([
-                Dense(512, input_dim=X_train_combined.shape[1], activation='relu'),
-                Dropout(0.3),
+                # Input layer with batch normalization
+                Dense(1024, input_dim=X_train_combined.shape[1], activation='relu'),
+                BatchNormalization(),
+                Dropout(0.2),
+                
+                # Hidden layers with residual-like connections
+                Dense(512, activation='relu'),
+                BatchNormalization(),
+                Dropout(0.2),
+                
                 Dense(256, activation='relu'),
-                Dropout(0.3),
+                BatchNormalization(),
+                Dropout(0.15),
+                
                 Dense(128, activation='relu'),
+                BatchNormalization(),
+                Dropout(0.1),
+                
+                Dense(64, activation='relu'),
+                Dropout(0.05),
+                
+                # Output layer
                 Dense(1)
             ])
             
-            model_combined_to_route.compile(optimizer=Adam(learning_rate=0.001), loss='huber')
-            es = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+            # Use adaptive learning rate with ReduceLROnPlateau for better control
+            model_combined_to_route.compile(
+                optimizer=Adam(learning_rate=0.001), 
+                loss='mse',  # Changed to MSE for better convergence
+                metrics=['mae', 'mse']
+            )
+            
+            # Enhanced callbacks for better training
+            es = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, min_delta=1e-6)
+            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-7, verbose=0)
+            
             history_route = model_combined_to_route.fit(
                 X_train_combined, y_train_route,
                 validation_split=0.2,
-                epochs=50,
-                callbacks=[es],
-                batch_size=32,
+                epochs=150,  # Increased epochs for better convergence
+                callbacks=[es, reduce_lr],
+                batch_size=16,  # Smaller batch size for better gradient updates
                 verbose=0
             )
             

@@ -869,14 +869,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                       backgroundColor: 'var(--color-surface-light)',
                       borderRadius: '0.5rem',
                       padding: '1rem',
-                      border: '1px solid var(--color-border)',
-                      marginBottom: '1rem'
+                      border: '2px solid var(--color-border)',
+                      marginBottom: '1rem',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                      backdropFilter: 'blur(10px)'
                     }}>
                       <h4 style={{
                         margin: '0 0 1rem 0',
                         fontSize: '1rem',
                         fontWeight: 600,
-                        color: 'var(--color-text)'
+                        color: 'var(--color-text)',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                       }}>
                         🎯 Predicted Route Table ({message.predictions.length} routes)
                       </h4>
@@ -892,37 +895,112 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                           fontSize: '0.85rem'
                         }}>
                           <thead>
-                            <tr style={{ backgroundColor: 'var(--color-surface-dark)' }}>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Endpoint</th>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Place Slack</th>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>CTS Slack</th>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Predicted Route Slack</th>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Fanout</th>
-                              <th style={{ padding: '0.5rem', border: '1px solid var(--color-border)', textAlign: 'left' }}>Net Count</th>
+                            <tr style={{ 
+                              backgroundColor: 'var(--color-surface-dark)',
+                              borderBottom: '2px solid var(--color-border)'
+                            }}>
+                              <th style={{ 
+                                padding: '0.75rem 0.5rem', 
+                                border: '1px solid var(--color-border)', 
+                                textAlign: 'left',
+                                fontWeight: 600,
+                                color: 'var(--color-text)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fontSize: '0.875rem'
+                              }}>Startpoint</th>
+                              <th style={{ 
+                                padding: '0.75rem 0.5rem', 
+                                border: '1px solid var(--color-border)', 
+                                textAlign: 'left',
+                                fontWeight: 600,
+                                color: 'var(--color-text)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fontSize: '0.875rem'
+                              }}>Endpoint</th>
+                              <th style={{ 
+                                padding: '0.75rem 0.5rem', 
+                                border: '1px solid var(--color-border)', 
+                                textAlign: 'left',
+                                fontWeight: 600,
+                                color: 'var(--color-text)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fontSize: '0.875rem'
+                              }}>Place Slack</th>
+                              <th style={{ 
+                                padding: '0.75rem 0.5rem', 
+                                border: '1px solid var(--color-border)', 
+                                textAlign: 'left',
+                                fontWeight: 600,
+                                color: 'var(--color-text)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fontSize: '0.875rem'
+                              }}>CTS Slack</th>
+                              <th style={{ 
+                                padding: '0.75rem 0.5rem', 
+                                border: '1px solid var(--color-border)', 
+                                textAlign: 'left',
+                                fontWeight: 600,
+                                color: 'var(--color-text)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fontSize: '0.875rem'
+                              }}>Predicted Route Slack</th>
                             </tr>
                           </thead>
                           <tbody>
                             {message.predictions.slice(0, 10).map((prediction: PredictionResult, index: number) => (
                               <tr key={index} style={{ 
-                                backgroundColor: index % 2 === 0 ? 'transparent' : 'var(--color-surface-light)' 
+                                backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(59, 130, 246, 0.05)',
+                                transition: 'background-color 0.2s ease'
                               }}>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
-                                  {prediction.endpoint || prediction.beginpoint}
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  border: '1px solid var(--color-border)',
+                                  color: 'var(--color-text)',
+                                  fontSize: '0.875rem',
+                                  fontWeight: 500
+                                }}>
+                                  {prediction.startpoint || prediction.beginpoint}
                                 </td>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  border: '1px solid var(--color-border)',
+                                  color: 'var(--color-text)',
+                                  fontSize: '0.875rem',
+                                  fontWeight: 500
+                                }}>
+                                  {prediction.endpoint}
+                                </td>
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  border: '1px solid var(--color-border)',
+                                  color: 'var(--color-text)',
+                                  fontSize: '0.875rem',
+                                  fontFamily: 'monospace',
+                                  textAlign: 'right'
+                                }}>
                                   {typeof prediction.place_slack === 'number' ? prediction.place_slack.toFixed(4) : prediction.place_slack}
                                 </td>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  border: '1px solid var(--color-border)',
+                                  color: 'var(--color-text)',
+                                  fontSize: '0.875rem',
+                                  fontFamily: 'monospace',
+                                  textAlign: 'right'
+                                }}>
                                   {typeof prediction.cts_slack === 'number' ? prediction.cts_slack.toFixed(4) : prediction.cts_slack}
                                 </td>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)', fontWeight: 600 }}>
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  border: '1px solid var(--color-border)', 
+                                  fontWeight: 700,
+                                  color: 'var(--color-success)',
+                                  fontSize: '0.875rem',
+                                  fontFamily: 'monospace',
+                                  textAlign: 'right',
+                                  backgroundColor: 'rgba(34, 197, 94, 0.1)'
+                                }}>
                                   {typeof prediction.predicted_route_slack === 'number' ? prediction.predicted_route_slack.toFixed(4) : prediction.predicted_route_slack}
-                                </td>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
-                                  {typeof prediction.fanout === 'number' ? prediction.fanout.toFixed(2) : prediction.fanout}
-                                </td>
-                                <td style={{ padding: '0.5rem', border: '1px solid var(--color-border)' }}>
-                                  {typeof prediction.netcount === 'number' ? prediction.netcount.toFixed(0) : prediction.netcount}
                                 </td>
                               </tr>
                             ))}
@@ -932,44 +1010,83 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                       
                       {message.predictions.length > 10 && (
                         <div style={{
-                          marginTop: '0.5rem',
-                          fontSize: '0.8rem',
-                          color: 'var(--color-text-muted)',
-                          textAlign: 'center'
+                          marginTop: '0.75rem',
+                          padding: '0.5rem',
+                          fontSize: '0.875rem',
+                          color: 'var(--color-text)',
+                          textAlign: 'center',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          borderRadius: '0.25rem',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          fontWeight: 500
                         }}>
-                          Showing first 10 of {message.predictions.length} predictions
+                          📊 Showing first 10 of {message.predictions.length} predictions (Download CSV for complete data)
                         </div>
                       )}
                     </div>
                     
                     {/* Download Button */}
                     <div style={{ marginTop: '0.75rem' }}>
-                      <a
-                        href="http://127.0.0.1:8088/results/download?format=csv"
-                        download="predicted_route_table.csv"
+                      <button
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           backgroundColor: 'var(--color-success)',
                           color: 'white',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '0.25rem',
-                          textDecoration: 'none',
-                          fontSize: '0.85rem',
-                          fontWeight: 500,
+                          padding: '0.75rem 1.5rem',
+                          borderRadius: '0.5rem',
+                          border: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
                           transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(34, 197, 94, 0.3)',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
                         }}
                         onClick={(e) => {
-                          // Dispatch a custom event to trigger download in chat context if needed
-                          const event = new CustomEvent('predictor-download', {
-                            detail: { predictions: message.predictions },
-                          });
-                          window.dispatchEvent(event);
+                          e.preventDefault();
+                          
+                          // Create CSV content from predictions
+                          const headers = ['Startpoint', 'Endpoint', 'Place Slack', 'CTS Slack', 'Predicted Route Slack'];
+                          const csvContent = [
+                            headers.join(','),
+                            ...message.predictions.map((prediction: any) => [
+                              `"${prediction.startpoint || prediction.beginpoint || ''}"`,
+                              `"${prediction.endpoint || ''}"`,
+                              prediction.place_slack || '',
+                              prediction.cts_slack || '',
+                              prediction.predicted_route_slack || ''
+                            ].join(','))
+                          ].join('\n');
+                          
+                          // Create and download CSV file
+                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                          const link = document.createElement('a');
+                          const url = URL.createObjectURL(blob);
+                          link.setAttribute('href', url);
+                          link.setAttribute('download', `predicted_route_table_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+                          link.style.visibility = 'hidden';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                          
+                          console.log('CSV download completed');
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-success-dark)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 4px 8px rgba(34, 197, 94, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-success)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(34, 197, 94, 0.3)';
                         }}
                       >
                         <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
                         Download Complete Route Table ({message.predictions.length} routes) as CSV
-                      </a>
+                      </button>
                     </div>
                   </div>
                 )}
