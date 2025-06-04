@@ -25,6 +25,7 @@ import { useContextHandling } from '../hooks/useContextHandling';
 import { ExtendedChatMessage } from '../types';
 import { chatbotService } from '../services/chatbotService';
 import TrainingForm from '../components/TrainingForm'; // Added for predictor training form
+import UserIcon from '../components/UserIcon';
 
 const Chatbot: React.FC = () => {
   const { isExpanded: isMainSidebarExpanded } = useSidebar();
@@ -700,7 +701,7 @@ const Chatbot: React.FC = () => {
       
       if (meta.isUserMessage) {
         const userMessage: ExtendedChatMessage = {
-          id: `user-${Date.now()}`,
+          id: meta.id || `user-${Date.now()}`,
           role: 'user',
           content: content.trim(),
           timestamp: new Date(),
@@ -891,6 +892,12 @@ const Chatbot: React.FC = () => {
       return;
     }
 
+    // Skip regular chat if this is a Chat2SQL message (Chat2SQL handles its own messages)
+    if (meta?.chat2sql) {
+      console.log('Chat2SQL message detected - skipping regular chat');
+      return;
+    }
+
     // Regular chat message handling
     const result = await sendChatMessage(
       content, 
@@ -972,7 +979,8 @@ const Chatbot: React.FC = () => {
         }}
       >
         <div className="flex items-center space-x-4">
-          <div className="flex items-center">
+          <div className="flex items-center space-x-3">
+            <UserIcon size={36} variant="default" />
             <h2
               className="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-none"
               style={{ color: 'var(--color-text)' }}

@@ -9,7 +9,7 @@ import {
   LightBulbIcon,
   ArrowPathIcon,
   CpuChipIcon,
-  TableCellsIcon // Added for Chat2SQL button
+  TableCellsIcon
 } from '@heroicons/react/24/outline';
 import { chatInputStyles } from './chatStyles';
 import FileUploadButton from './FileUploadButton';
@@ -343,8 +343,13 @@ The model is now ready for predictions! Type **"predict"** to generate route tab
     } else if (isChat2SqlEnabled) {
       console.log('Chat2SQL mode enabled, processing query:', message);
       
-      // Send the user message first (as a regular message)
-      onSendMessage(message);
+      // Send the user message with Chat2SQL metadata (don't send to main AI)
+      onSendMessage(message, undefined, {
+        chat2sql: true,
+        isUserMessage: true,
+        timestamp: new Date().toISOString(),
+        id: `chat2sql-user-${Date.now()}`
+      });
       
       setLocalLoading(true);
       

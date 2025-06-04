@@ -6,7 +6,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
-  UserIcon,
   ClipboardDocumentIcon,
   CheckIcon,
   DocumentTextIcon,
@@ -14,15 +13,16 @@ import {
   ArrowDownTrayIcon,
   InformationCircleIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  TableCellsIcon
 } from '@heroicons/react/24/outline';
 import { messageBubbleStyles, markdownStyles } from './chatStyles';
 import { useTheme } from '../../contexts/ThemeContext';
 import { RagSource } from '../../services/ragChatService';
 import { containsReadContextToolCall, extractToolCall, containsShellCommandToolCall, extractShellCommand } from '../../utils/toolParser';
 import ContextReadingButton from './ContextReadingButton';
-import ShellCommandButton from './ShellCommandButton';
 import ShellCommandResult from './ShellCommandResult';
+import UserIcon from '../UserIcon';
 
 interface ChatMessageProps {
   message: ExtendedChatMessage;
@@ -70,38 +70,33 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     return undefined;
   };
 
-  // Function to extract shell command tool text for display
-  const extractShellToolText = (): string | undefined => {
-    if (!isAI || !message.content) return undefined;
 
-    // Look for JSON pattern in the content
-    const jsonPattern = /\{\s*"tool":\s*"runshellcommand"[\s\S]*?\}/i;
-    const match = message.content.match(jsonPattern);
-    if (match) {
-      return match[0];
-    }
-
-    // Look for code block with JSON
-    const codeBlockPattern = /```(?:json)?\s*(\{[\s\S]*?"tool":\s*"runshellcommand"[\s\S]*?\})\s*```/i;
-    const codeBlockMatch = message.content.match(codeBlockPattern);
-    if (codeBlockMatch) {
-      return codeBlockMatch[1];
-    }
-
-    return undefined;
-  };
 
   // Check if the message contains a read_context tool call or has isContextTool flag
   const hasReadContextTool = isAI && (containsReadContextToolCall(message.content) || message.isContextTool);
   const toolText = hasReadContextTool ? extractToolText() : undefined;
 
+  // Check if the message contains a shell command tool call
+  const hasShellCommandTool = isAI && containsShellCommandToolCall(message.content);
+  const shellCommand = hasShellCommandTool ? extractShellCommand(message.content) : undefined;
+
   // Determine if this is a Chat2SQL message
   const isChat2SqlMessage = message.chat2sql || message.isSqlResult || message.isSqlQuery;
+  
+  // Debug logging for Chat2SQL messages
+  if (isChat2SqlMessage) {
+    console.log('Chat2SQL message detected:', {
+      messageId: message.id,
+      role: message.role,
+      isAI,
+      chat2sql: message.chat2sql,
+      isSqlResult: message.isSqlResult,
+      isSqlQuery: message.isSqlQuery,
+      content: message.content?.substring(0, 50) + '...'
+    });
+  }
 
-  // Check if the message contains a runshellcommand tool call (but exclude SQL results and Chat2SQL messages)
-  const hasShellCommandTool = isAI && !message.isSqlResult && !message.chat2sql && !isChat2SqlMessage && containsShellCommandToolCall(message.content);
-  const shellCommand = hasShellCommandTool ? extractShellCommand(message.content) : null;
-  const shellToolText = hasShellCommandTool ? extractShellToolText() : undefined;
+
 
   // Check if the message contains phrases that should trigger the context tool
   // Be more selective to avoid false positives
@@ -117,9 +112,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
   const [aiContextResponse, setAiContextResponse] = useState<string | null>(null);
   const [showContextTool, setShowContextTool] = useState<boolean>(shouldTriggerContextTool);
 
-  // State for shell command tool
+  // State for shell command results
   const [shellCommandResult, setShellCommandResult] = useState<any>(null);
-  const [aiShellCommandResponse, setAiShellCommandResponse] = useState<string | null>(null);
+
+
 
   // If we detect a phrase that should trigger the context tool, show the button
   useEffect(() => {
@@ -188,11 +184,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
     }
   }, [hasReadContextTool, conversationId, message.id]);
 
-  // Check localStorage for shell command button state
+  // Check storage for shell command results
   useEffect(() => {
     if (hasShellCommandTool && conversationId) {
       try {
         const commandKey = `shell_command_${conversationId}_${message.id}`;
+        
+        // Try sessionStorage first (faster) then fall back to localStorage
         let storedState = sessionStorage.getItem(commandKey);
         if (!storedState) {
           storedState = localStorage.getItem(commandKey);
@@ -200,13 +198,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
 
         if (storedState) {
           const parsedState = JSON.parse(storedState);
-          if (parsedState.executed) {
+          if (parsedState.executed && parsedState.result) {
             console.log('Shell command was previously executed, restoring state');
             setShellCommandResult(parsedState.result);
-            if (parsedState.aiResponse) {
-              setAiShellCommandResponse(parsedState.aiResponse);
+            
+            // Re-save to both storage types to ensure consistency
+            try {
+              localStorage.setItem(commandKey, storedState);
+              sessionStorage.setItem(commandKey, storedState);
+            } catch (storageError) {
+              console.error('Error re-saving shell command state to storage:', storageError);
             }
-            setLastUpdated(Date.now());
           }
         }
       } catch (error) {
@@ -300,12 +302,33 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
   };
 
   // Handle shell command completion
-  const handleShellCommandComplete = async (result: any, aiResponse?: string) => {
+  const handleShellCommandComplete = async (result: any) => {
     setShellCommandResult(result);
-    if (aiResponse) {
-      setAiShellCommandResponse(aiResponse);
+
+    // Save the shell command result to storage
+    if (conversationId && message.id) {
+      try {
+        const commandKey = `shell_command_${conversationId}_${message.id}`;
+        
+        const stateToSave = {
+          executed: true,
+          result: result,
+          timestamp: new Date().toISOString(),
+          messageId: message.id,
+          conversationId: conversationId
+        };
+
+        // Save to both storage types for redundancy
+        localStorage.setItem(commandKey, JSON.stringify(stateToSave));
+        sessionStorage.setItem(commandKey, JSON.stringify(stateToSave));
+
+        console.log('Saved shell command state to storage:', commandKey);
+      } catch (storageError) {
+        console.error('Error saving shell command state to storage:', storageError);
+      }
     }
-    setLastUpdated(Date.now());
+
+    console.log('Shell command execution completed for message:', message.id);
   };
 
   // Function to copy code to clipboard
@@ -498,47 +521,64 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
       data-message-id={message.id}
       data-predictor={isPredictorMessage ? "true" : "false"}
     >
-      <div style={getHeaderStyle()}>
-        {isAI ? (
-          <>
-            <div style={getAvatarStyle()}>
-              {isPredictorMessage ? 'P' : 'AI'}
-            </div>
-            <div style={{
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              color: isPredictorMessage ? '#4f8bff' : 'var(--color-primary)',
-              marginRight: '0.5rem',
-              letterSpacing: '0.025em'
-            }}>
-              {isPredictorMessage ? 'PREDICTOR' : 'AI'}
-            </div>
-            {isPredictorMessage && (
-              <div style={messageBubbleStyles.predictor.badge}>
-                Predictor Result
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div style={messageBubbleStyles.user.avatar}>
-              <UserIcon className="w-5 h-5" />
-            </div>
+      {/* User messages: Show header above the message content */}
+      {!isAI && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          marginBottom: '0.5rem',
+          width: '100%'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
             <div style={{
               fontSize: '0.875rem',
               fontWeight: 700,
               color: 'var(--color-primary)',
-              marginRight: '0.5rem',
               letterSpacing: '0.025em'
             }}>
               {message.isUserCommand ? 'USER COMMAND' : 'USER'}
             </div>
-          </>
-        )}
-        <div style={getTimestampStyle()}>
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            <UserIcon size={24} variant="small" />
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'var(--color-text-muted)'
+            }}>
+              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* AI messages: Keep original header layout */}
+      {isAI && (
+        <div style={getHeaderStyle()}>
+          <div style={getAvatarStyle()}>
+            {isPredictorMessage ? 'P' : 'AI'}
+          </div>
+          <div style={{
+            fontSize: '0.875rem',
+            fontWeight: 700,
+            color: isPredictorMessage ? '#4f8bff' : 'var(--color-primary)',
+            marginRight: '0.5rem',
+            letterSpacing: '0.025em'
+          }}>
+            {isPredictorMessage ? 'PREDICTOR' : 'AI'}
+          </div>
+          {isPredictorMessage && (
+            <div style={messageBubbleStyles.predictor.badge}>
+              Predictor Result
+            </div>
+          )}
+          <div style={getTimestampStyle()}>
+            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      )}
 
       <div style={message.error ? messageBubbleStyles.predictor.errorContent : getContentStyle()}>
         {/* File attachment for user messages */}
@@ -832,24 +872,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                     )}
                   </div>
                 </div>
-              </>
-            ) : (hasShellCommandTool && !shellCommandResult) ? (
-              // Show the shell command button if the message contains a runshellcommand tool call
-              <>
-                <div>
-                  {/* Display the message content up to the tool call */}
-                  {message.content.split(/\{[^}]*"tool"[^}]*"runshellcommand"/i)[0]}
-                </div>
-                {shellCommand && (
-                  <ShellCommandButton
-                    onComplete={handleShellCommandComplete}
-                    toolText={shellToolText}
-                    messageId={message.id}
-                    conversationId={conversationId || message.conversationId}
-                    command={shellCommand}
-                    key={`shell-command-button-${message.id}-${lastUpdated}`}
-                  />
-                )}
               </>
             ) : hasShellCommandTool && shellCommandResult ? (
               // Show the shell command result if the command has been executed

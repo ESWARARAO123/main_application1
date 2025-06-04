@@ -101,6 +101,72 @@ def release_connection(conn):
     except Exception as e:
         logger.error(f"Failed to release connection to pool: {str(e)}")
 
+def clean_response_data(response_text: str) -> str:
+    """Clean the response data to remove any unwanted content"""
+    try:
+        # First, remove any JSON blocks that might contain unwanted commands
+        import re
+        
+        # Remove JSON blocks that contain MySQL or shell commands
+        json_pattern = r'\{[^}]*(?:mysql|command|shell|username|password)[^}]*\}'
+        response_text = re.sub(json_pattern, '', response_text, flags=re.IGNORECASE)
+        
+        # Remove any lines that contain unwanted patterns
+        lines = response_text.split('\n')
+        clean_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines
+            if not line:
+                continue
+                
+            # Skip lines that contain unwanted patterns
+            unwanted_patterns = [
+                'mysql',
+                'shell command',
+                'runshellcommand',
+                'username',
+                'password',
+                'show code',
+                'command:',
+                'tool:',
+                '```json',
+                '```sql',
+                '```'
+            ]
+            
+            # Check if line contains any unwanted patterns
+            if any(pattern in line.lower() for pattern in unwanted_patterns):
+                continue
+                
+            # Skip lines that look like JSON
+            if (line.startswith('{') and '}' in line) or (line.startswith('[') and ']' in line):
+                continue
+                
+            clean_lines.append(line)
+        
+        cleaned_response = '\n'.join(clean_lines).strip()
+        
+        # If the response is empty after cleaning, return a default message
+        if not cleaned_response:
+            return "No data found."
+        
+        # Additional cleanup: remove any remaining unwanted text
+        cleaned_response = re.sub(r'To list all tables.*?mysql.*?;', '', cleaned_response, flags=re.IGNORECASE | re.DOTALL)
+        cleaned_response = re.sub(r'\{.*?"tool".*?\}', '', cleaned_response, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Remove the specific pattern you mentioned
+        cleaned_response = re.sub(r'To list all tables in your database using.*?mysql.*?command.*?```json.*?```', '', cleaned_response, flags=re.IGNORECASE | re.DOTALL)
+        cleaned_response = re.sub(r'Command Declined.*?Command execution declined', '', cleaned_response, flags=re.IGNORECASE | re.DOTALL)
+        cleaned_response = re.sub(r'mysql -u \[username\].*?SHOW TABLES.*?;', '', cleaned_response, flags=re.IGNORECASE | re.DOTALL)
+        
+        return cleaned_response.strip()
+        
+    except Exception as e:
+        logger.error(f"Error cleaning response data: {str(e)}")
+        return response_text  # Return original if cleaning fails
+
 async def execute_sql(query: str) -> pd.DataFrame:
     """Execute SQL query and return results as pandas DataFrame"""
     conn = None
@@ -197,12 +263,19 @@ Database Schema:
 Question: {query}
 
 CRITICAL RULES:
-1. Return ONLY the SQL query, no explanations or markdown
-2. Use exact column names from the schema above
-3. For listing all tables, ALWAYS use: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
-4. For table structure, use: SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'table_name';
-5. Use proper PostgreSQL syntax
-6. Always end with semicolon
+1. Return ONLY the SQL query, no explanations, no markdown, no additional text
+2. Do not include any JSON, commands, or suggestions about MySQL or shell commands
+3. Do not mention MySQL, shell commands, or any command-line tools
+4. Do not provide instructions on how to use mysql command
+5. Use exact column names from the schema above
+6. For listing all tables, ALWAYS use: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+7. For table structure, use: SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'table_name';
+8. Use proper PostgreSQL syntax
+9. Always end with semicolon
+10. Return ONLY the SQL statement, nothing else
+11. Do not suggest alternative methods or tools
+
+FORBIDDEN: Do not mention mysql, shell commands, command line tools, or provide JSON responses.
 
 Common queries:
 - List tables: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
@@ -238,6 +311,24 @@ SQL Query:"""
         
         # Fix common schema-related errors
         sql_query = sql_query.replace('schema_name', 'table_schema')
+        
+        # Remove any extra text that might be added by the AI model
+        # Extract only the SQL query part
+        lines = sql_query.split('\n')
+        clean_lines = []
+        for line in lines:
+            line = line.strip()
+            if line and (line.upper().startswith('SELECT') or line.upper().startswith('INSERT') or 
+                        line.upper().startswith('UPDATE') or line.upper().startswith('DELETE') or
+                        line.upper().startswith('WITH') or line.upper().startswith('CREATE') or
+                        line.upper().startswith('ALTER') or line.upper().startswith('DROP')):
+                clean_lines.append(line)
+                break  # Take only the first valid SQL statement
+        
+        if clean_lines:
+            sql_query = clean_lines[0]
+            if not sql_query.endswith(';'):
+                sql_query += ';'
         
         logger.info(f"Cleaned SQL query: {sql_query}")
         return sql_query
@@ -295,6 +386,9 @@ async def execute_query_endpoint(request: Request):
         else:
             logger.warning(f"No data found for query: {query}")
             table = "No data found."
+        
+        # Clean the table data to remove any unwanted content that might have been added
+        table = clean_response_data(table)
         
         # Save messages to database if session_id is provided
         if session_id:
