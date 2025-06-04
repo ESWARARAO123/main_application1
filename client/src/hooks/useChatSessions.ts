@@ -123,6 +123,54 @@ export const useChatSessions = () => {
         } catch (error) {
           console.error('Error restoring predictor data for message:', error);
         }
+
+        // Try to restore Chat2SQL data from localStorage
+        try {
+          const chat2sqlKey = `chat2sql_messages_${sessionId}`;
+          const chat2sqlData = localStorage.getItem(chat2sqlKey);
+          if (chat2sqlData) {
+            const chat2sqlMessages = JSON.parse(chat2sqlData);
+            
+            // Try multiple matching strategies for Chat2SQL messages
+            let matchingChat2SqlMsg = null;
+            
+            // Strategy 1: Exact content and close timestamp match
+            matchingChat2SqlMsg = chat2sqlMessages.find((cMsg: any) => 
+              cMsg.content === msg.content && 
+              Math.abs(new Date(cMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 10000 // 10 second tolerance
+            );
+            
+            // Strategy 2: If no exact match, try matching by role and approximate timestamp
+            if (!matchingChat2SqlMsg) {
+              matchingChat2SqlMsg = chat2sqlMessages.find((cMsg: any) => 
+                cMsg.role === msg.role && 
+                Math.abs(new Date(cMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 30000 && // 30 second tolerance
+                (cMsg.chat2sql || cMsg.isSqlResult || cMsg.isSqlQuery) // Has Chat2SQL-specific data
+              );
+            }
+            
+            // Strategy 3: For Chat2SQL messages, try matching by content similarity
+            if (!matchingChat2SqlMsg) {
+              matchingChat2SqlMsg = chat2sqlMessages.find((cMsg: any) => 
+                cMsg.chat2sql && 
+                Math.abs(new Date(cMsg.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 60000 // 1 minute tolerance
+              );
+            }
+            
+            if (matchingChat2SqlMsg) {
+              console.log('Restored Chat2SQL data for message:', msg.id, matchingChat2SqlMsg);
+              return {
+                ...baseMessage,
+                chat2sql: matchingChat2SqlMsg.chat2sql,
+                isSqlResult: matchingChat2SqlMsg.isSqlResult,
+                isSqlQuery: matchingChat2SqlMsg.isSqlQuery,
+                isUserMessage: matchingChat2SqlMsg.isUserMessage
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error restoring Chat2SQL data for message:', error);
+        }
         
         return baseMessage;
       });

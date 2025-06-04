@@ -95,8 +95,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
   const hasReadContextTool = isAI && (containsReadContextToolCall(message.content) || message.isContextTool);
   const toolText = hasReadContextTool ? extractToolText() : undefined;
 
-  // Check if the message contains a runshellcommand tool call
-  const hasShellCommandTool = isAI && containsShellCommandToolCall(message.content);
+  // Determine if this is a Chat2SQL message
+  const isChat2SqlMessage = message.chat2sql || message.isSqlResult || message.isSqlQuery;
+
+  // Check if the message contains a runshellcommand tool call (but exclude SQL results and Chat2SQL messages)
+  const hasShellCommandTool = isAI && !message.isSqlResult && !message.chat2sql && !isChat2SqlMessage && containsShellCommandToolCall(message.content);
   const shellCommand = hasShellCommandTool ? extractShellCommand(message.content) : null;
   const shellToolText = hasShellCommandTool ? extractShellToolText() : undefined;
 
@@ -446,7 +449,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
 
   // Determine message type
   const isPredictorMessage = message.predictor || message.predictions || message.isUserCommand;
-  const isChat2SqlMessage = message.chat2sql || message.isSqlResult || message.isSqlQuery;
   
   // Get appropriate styles based on message type and theme
   const getContainerStyle = () => {
@@ -920,15 +922,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                   </ReactMarkdown>
                 </div>
                 {/* Display Prediction Table */}
-                {message.predictor && (() => {
+                {(() => {
                   console.log('Checking prediction display conditions:', {
                     isPredictor: message.predictor,
                     hasPredictions: !!message.predictions,
                     predictionsLength: message.predictions?.length,
-                    messageId: message.id
+                    messageId: message.id,
+                    predictions: message.predictions
                   });
-                  return true;
-                })() && message.predictions && message.predictions.length > 0 && (
+                  return message.predictor && message.predictions && message.predictions.length > 0;
+                })() && (
                   <div style={{ marginTop: '1rem' }}>
                     <div style={{
                       backgroundColor: 'var(--color-surface-light)',

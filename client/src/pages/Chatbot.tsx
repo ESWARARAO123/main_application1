@@ -145,6 +145,31 @@ const Chatbot: React.FC = () => {
     }
   };
 
+  // Helper functions for Chat2SQL message persistence
+  const saveChat2SqlMessage = (sessionId: string, message: ExtendedChatMessage) => {
+    try {
+      const key = `chat2sql_messages_${sessionId}`;
+      const existing = localStorage.getItem(key);
+      let messages = existing ? JSON.parse(existing) : [];
+      
+      // Add the new message
+      messages.push({
+        ...message,
+        timestamp: message.timestamp.toISOString() // Convert Date to string for storage
+      });
+      
+      // Keep only the last 50 messages per session to prevent localStorage bloat
+      if (messages.length > 50) {
+        messages = messages.slice(-50);
+      }
+      
+      localStorage.setItem(key, JSON.stringify(messages));
+      console.log('Chat2SQL message saved to localStorage:', message.id);
+    } catch (error) {
+      console.error('Error saving Chat2SQL message to localStorage:', error);
+    }
+  };
+
   const loadPredictorMessages = (sessionId: string): ExtendedChatMessage[] => {
     try {
       const key = `predictor_messages_${sessionId}`;
@@ -162,6 +187,23 @@ const Chatbot: React.FC = () => {
     return [];
   };
 
+  const loadChat2SqlMessages = (sessionId: string): ExtendedChatMessage[] => {
+    try {
+      const key = `chat2sql_messages_${sessionId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const messages = JSON.parse(stored);
+        return messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp) // Convert string back to Date
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading Chat2SQL messages from localStorage:', error);
+    }
+    return [];
+  };
+
   const clearPredictorMessages = (sessionId: string) => {
     try {
       const key = `predictor_messages_${sessionId}`;
@@ -170,6 +212,25 @@ const Chatbot: React.FC = () => {
     } catch (error) {
       console.error('Error clearing predictor messages:', error);
     }
+  };
+
+  const clearChat2SqlMessages = (sessionId: string) => {
+    try {
+      const key = `chat2sql_messages_${sessionId}`;
+      localStorage.removeItem(key);
+      console.log('Chat2SQL messages cleared for session:', sessionId);
+    } catch (error) {
+      console.error('Error clearing Chat2SQL messages:', error);
+    }
+  };
+
+  // Function to get session title based on active mode
+  const getSessionTitleForMode = () => {
+    if (isPredictorEnabled) return 'Predictor Chat';
+    if (isChat2SqlEnabled) return 'Chat2SQL Session';
+    if (isRagEnabled) return 'RAG Chat';
+    if (isMCPEnabled) return 'MCP Chat';
+    return 'New Chat';
   };
 
   // Enhanced MCP helper functions
@@ -589,11 +650,17 @@ const Chatbot: React.FC = () => {
           role: 'assistant',
           content: meta.error ? `Error: ${meta.error}` : meta.content,
           timestamp: new Date(meta.timestamp),
-          isSqlResult: true
+          isSqlResult: true,
+          chat2sql: true
         };
         
         console.log('SQL result message:', aiMessage);
         setMessages(prev => [...prev, aiMessage]);
+        
+        // Save Chat2SQL AI message to localStorage
+        if (activeSessionId) {
+          saveChat2SqlMessage(activeSessionId, aiMessage);
+        }
         
         // Save Chat2SQL AI response to database
         let sessionId = activeSessionId;
@@ -637,11 +704,17 @@ const Chatbot: React.FC = () => {
           role: 'user',
           content: content.trim(),
           timestamp: new Date(),
-          isSqlQuery: true
+          isSqlQuery: true,
+          chat2sql: true
         };
 
         console.log('User SQL query message:', userMessage);
         setMessages(prev => [...prev, userMessage]);
+        
+        // Save Chat2SQL user message to localStorage
+        if (activeSessionId) {
+          saveChat2SqlMessage(activeSessionId, userMessage);
+        }
 
         // Save Chat2SQL user message to database
         let sessionId = activeSessionId;

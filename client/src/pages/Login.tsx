@@ -283,7 +283,7 @@ export default function Login() {
             style={{ letterSpacing: 'tight' }}
           >
             <span style={{ color: '#e11d48' }}>Pinnacle</span>
-            <span style={{ color: '#1e3a8a' }}>flow</span>
+            {/* <span style={{ color: '#1e3a8a' }}>flow</span> */}
             <span style={{ 
               display: 'inline-block',
               marginLeft: '0.2rem',
