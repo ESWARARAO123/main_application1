@@ -48,24 +48,31 @@ let PDFLoader;
 let DocxLoader;
 let RecursiveCharacterTextSplitter;
 try {
-  const { PDFLoader: PDFLoaderImport } = require('langchain/document_loaders/fs/pdf');
+  console.log('Attempting to load LangChain components...');
+  const { PDFLoader: PDFLoaderImport } = require('@langchain/community/document_loaders/fs/pdf');
+  PDFLoader = PDFLoaderImport;
+  console.log('LangChain PDFLoader loaded successfully.');
+
   const { RecursiveCharacterTextSplitter: TextSplitterImport } = require('langchain/text_splitter');
+  RecursiveCharacterTextSplitter = TextSplitterImport;
+  console.log('LangChain RecursiveCharacterTextSplitter loaded successfully.');
 
   // Try to import DocxLoader if available
   try {
-    const { DocxLoader: DocxLoaderImport } = require('langchain/document_loaders/fs/docx');
+    const { DocxLoader: DocxLoaderImport } = require('@langchain/community/document_loaders/fs/docx');
     DocxLoader = DocxLoaderImport;
+    console.log('LangChain DocxLoader loaded successfully.');
   } catch (docxError) {
-    console.warn('LangChain DocxLoader not available. Using fallback for DOCX files.');
+    console.warn(`LangChain DocxLoader not available: ${docxError.message}. Using fallback for DOCX files.`);
     DocxLoader = null;
   }
 
-  PDFLoader = PDFLoaderImport;
-  RecursiveCharacterTextSplitter = TextSplitterImport;
-  console.log('LangChain loaded successfully for document processing');
+  console.log('All available LangChain components loaded successfully for document processing.');
 } catch (error) {
-  console.warn('LangChain packages not found. Using fallback document processing methods.');
-  console.warn('Install LangChain for better document processing: npm install langchain pdf-parse');
+  console.error(`Error loading LangChain components: ${error.message}`, error);
+  console.warn('LangChain packages not found or failed to load. Using fallback document processing methods.');
+  console.warn('If you have recently installed langchain, ensure the application was restarted.');
+  console.warn('Verify that "langchain" is listed in your package.json and installed in node_modules.');
   PDFLoader = null;
   DocxLoader = null;
   RecursiveCharacterTextSplitter = null;

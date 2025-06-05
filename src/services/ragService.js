@@ -46,7 +46,7 @@ class RAGService {
    */
   async retrieveContext(query, options = {}) {
     const {
-      topK = 5,
+      topK = 10,
       model = this.embeddingModel,
       sessionId = null,
       userId = null
@@ -132,6 +132,11 @@ class RAGService {
       }
 
       console.log(`RAG: Found ${searchResult.results.length} relevant chunks`);
+
+      // Temporary debug: Log summaries of retrieved chunks to understand content
+      searchResult.results.forEach((result, index) => {
+        console.log(`RAG: Chunk ${index + 1} (Score: ${result.score.toFixed(3)}): ${result.text.substring(0, 100).replace(/\n/g, ' ')}...`);
+      });
 
       // For table queries, prioritize chunks that contain table markers
       let results = searchResult.results;
@@ -268,18 +273,31 @@ class RAGService {
 
       console.log(`RAG: Using context from ${ragResult.sources.length} sources`);
 
+      // Optimize context length for better LLM processing
+      let optimizedContext = ragResult.context;
+      const maxContextLength = 8000; // Reasonable limit for most models
+      if (optimizedContext.length > maxContextLength) {
+        console.log(`RAG: Context too long (${optimizedContext.length} chars), truncating to ${maxContextLength} chars`);
+        optimizedContext = optimizedContext.substring(0, maxContextLength) + "\n\n[Context truncated for optimal processing]";
+      }
+
       // Create the prompt with context
       const ragMessages = [
         {
           role: 'system',
-          content: 'You are a helpful assistant that answers questions based on the provided context. If the information is not in the context, acknowledge that and provide your best response based on your general knowledge, but make it clear which parts are from the documents and which are not.'
+          content: `You are an expert Question-Answering assistant. Strictly answer the user's question using ONLY the provided context.
+Quote directly from the context when possible.
+If the context does not contain the exact answer, but contains related information, use that to provide a relevant response and explain how it connects to the query.
+If the context does not contain the answer or relevant information, state clearly that the information is not found in the provided documents.
+Do not use general knowledge or infer information beyond the provided text.
+Organize your answer clearly. If the question asks about a specific section (e.g., 'section 2.1'), focus your answer on information from chunks related to that section title or content.
+Respond with "I couldn't find relevant information about '[user's query]' in the available documents." if the context is empty or not relevant.`
         },
         {
           role: 'user',
-          content: `Use the following context from relevant documents to answer the question:
-
+          content: `Based on the following context, please answer the question.
 Context:
-${ragResult.context}
+${optimizedContext || "No context provided."}
 
 Question: ${message}`
         }
@@ -297,7 +315,7 @@ Question: ${message}`
             success: true,
             response: chatResult.response,
             sources: ragResult.sources,
-            context: ragResult.context
+            context: optimizedContext
           };
         } else {
           console.warn(`RAG: Failed to generate chat response: ${chatResult.error}`);
@@ -324,7 +342,7 @@ Question: ${message}`
           }]
         },
         sources: ragResult.sources,
-        context: ragResult.context
+        context: optimizedContext
       };
 
       return chatResponse;

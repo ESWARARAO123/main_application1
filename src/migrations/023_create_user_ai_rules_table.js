@@ -46,10 +46,10 @@ async function up() {
     `);
 
     await client.query('COMMIT');
-    console.log('Migration 017: User AI rules table created successfully');
+    console.log('Migration 023: User AI rules table created successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Migration 017 failed:', error);
+    console.error('Migration 023 failed:', error);
     throw error;
   } finally {
     client.release();
@@ -66,10 +66,10 @@ async function down() {
     await client.query('DROP TABLE IF EXISTS user_ai_rules CASCADE');
 
     await client.query('COMMIT');
-    console.log('Migration 017: User AI rules table dropped successfully');
+    console.log('Migration 023: User AI rules table dropped successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Migration 017 rollback failed:', error);
+    console.error('Migration 023 rollback failed:', error);
     throw error;
   } finally {
     client.release();

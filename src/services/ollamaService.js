@@ -9,9 +9,9 @@ const { logger } = require('../utils/logger');
 const path = require('path');
 
 // Default timeout for Ollama API requests (in milliseconds)
-const DEFAULT_TIMEOUT = 120000; // Increased to 2 minutes for streaming
-const STREAMING_TIMEOUT = 300000; // 5 minutes for streaming requests
-const EMBEDDING_TIMEOUT = 60000; // 1 minute for embedding generation
+const DEFAULT_TIMEOUT = 300000; // Increased to 5 minutes for larger models
+const STREAMING_TIMEOUT = 600000; // 10 minutes for streaming requests
+const EMBEDDING_TIMEOUT = 180000; // 3 minutes for embedding generation
 
 // Default embedding model to use if none specified
 const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text';
