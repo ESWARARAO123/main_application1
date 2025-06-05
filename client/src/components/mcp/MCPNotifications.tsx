@@ -377,7 +377,7 @@ const MCPNotifications: React.FC = () => {
                 {allNotifications.length > 9 ? '9+' : allNotifications.length}
               </motion.span>
             </motion.div>
-          )}
+        )}
         </AnimatePresence>
       </motion.button>
       
@@ -443,7 +443,7 @@ const MCPNotifications: React.FC = () => {
                     
                     <div className="flex items-center space-x-2">
                       <motion.button 
-                        onClick={clearNotifications}
+                onClick={clearNotifications}
                         className="px-3 py-1 rounded-lg text-xs font-medium backdrop-blur-md"
                         style={{
                           background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.25)' : 'rgba(42, 51, 73, 0.2)',
@@ -455,7 +455,7 @@ const MCPNotifications: React.FC = () => {
                           background: isLight ? 'rgba(148, 163, 184, 0.25)' : isMidnight ? 'rgba(55, 65, 81, 0.35)' : 'rgba(42, 51, 73, 0.3)'
                         }}
                         whileTap={{ scale: 0.95 }}
-                      >
+              >
                         Clear All
                       </motion.button>
                       
@@ -504,7 +504,7 @@ const MCPNotifications: React.FC = () => {
                       <p className="font-medium text-sm" style={{ color: mutedTextColor }}>All quiet in the MCP zone!</p>
                       <p className="text-xs mt-1" style={{ color: mutedTextColor, opacity: 0.8 }}>No notifications at the moment</p>
                     </motion.div>
-                  ) : (
+            ) : (
                     <div className="divide-y divide-white/10">
                       {allNotifications.map((notification, index) => {
                         const style = getNotificationStyle(notification);
@@ -557,8 +557,8 @@ const MCPNotifications: React.FC = () => {
                                         >
                                           🔌 Reconnect WebSocket
                                         </motion.button>
-                                      )}
-                                      
+                          )}
+                          
                           {clientIdMissing && wsConnected && (
                                         <motion.button 
                               onClick={handleFixClientId}
@@ -573,8 +573,8 @@ const MCPNotifications: React.FC = () => {
                                         >
                                           🔧 Fix Client ID
                                         </motion.button>
-                                      )}
-                                      
+                          )}
+                          
                           {mcpConnection.status === 'error' && wsConnected && (
                                         <motion.button 
                               onClick={reconnectToServer}
@@ -622,18 +622,18 @@ const MCPNotifications: React.FC = () => {
                                   <div className="space-y-2">
                         {notification.error ? (
                                       <p className="text-sm text-red-300">{notification.error}</p>
-                                    ) : (
+                        ) : (
                                       <p className="text-sm" style={{ color: textColor }}>{notification.result?.text}</p>
-                                    )}
+                        )}
                                   </div>
-                                )}
-                                
+                    )}
+                    
                                 {/* Timestamp */}
                                 <div className="flex items-center mt-2 text-xs" style={{ color: mutedTextColor }}>
                                   <span>{new Date(notification.timestamp).toLocaleTimeString()}</span>
                                 </div>
-                              </div>
-                            </div>
+                    </div>
+                  </div>
 
                             {/* Subtle background animation */}
                             <motion.div
@@ -675,7 +675,7 @@ const MCPNotifications: React.FC = () => {
                         className={`w-2 h-2 rounded-full ${
                           mcpConnection.status === 'connected' ? 'bg-emerald-400' : 
                           mcpConnection.status === 'connecting' ? 'bg-blue-400' : 'bg-red-400'
-                        }`}
+              }`}
                         animate={{
                           scale: mcpConnection.status === 'connecting' ? [1, 1.3, 1] : 1,
                           opacity: mcpConnection.status === 'connecting' ? [0.5, 1, 0.5] : 1,

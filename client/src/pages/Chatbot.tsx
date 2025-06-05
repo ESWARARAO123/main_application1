@@ -94,7 +94,7 @@ const Chatbot: React.FC = () => {
   });
 
   // Get MCP functionality from the actual contexts
-  const { isConnected: isMCPConnected, defaultServer, connectToServer } = useMCP();
+  const { isConnected: isMCPConnected, defaultServer, connectToServer, mcpConnection } = useMCP();
   const { isAgentEnabled: isMCPEnabled, toggleAgent: toggleMCPEnabled } = useMCPAgent();
   
   // MCP Server selector state
@@ -276,7 +276,152 @@ const Chatbot: React.FC = () => {
     fetchSessions: () => void
   ) => {
     console.log('MCP Chat message handling:', content);
-    throw new Error('MCP chat functionality not yet implemented');
+    console.log('MCP connection state:', { 
+      isMCPConnected, 
+      defaultServer: !!defaultServer, 
+      mcpConnectionClientId: mcpConnection?.clientId,
+      mcpConnectionState: mcpConnection 
+    });
+    
+    // Check if we have MCP connection details - improved check
+    if (!defaultServer) {
+      console.error('No default MCP server configured');
+      throw new Error('No MCP server configured');
+    }
+    
+    if (!mcpConnection?.clientId) {
+      console.error('No MCP client ID available');
+      throw new Error('MCP connection not established - no client ID');
+    }
+
+    setIsStreaming(true);
+    setIsLoading(true);
+
+    // Create the assistant message placeholder
+    const assistantMessageId = `assistant-${Date.now()}`;
+    const assistantMessage: ExtendedChatMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isStreaming: true
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+    streamedContentRef.current[assistantMessageId] = '';
+
+    try {
+      // Prepare messages for MCP chat service
+      const mcpMessages = messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant' | 'system',
+        content: msg.content
+      }));
+
+      // Add the current user message
+      mcpMessages.push({
+        role: 'user',
+        content: content
+      });
+
+      // Import mcpChatService
+      const mcpChatServiceModule = await import('../services/mcpChatService');
+
+      // Stream the response using MCP chat service
+      const abortFunction = await mcpChatServiceModule.default.streamChatCompletion(
+        {
+          modelId: selectedModel.id,
+          messages: mcpMessages,
+          mcpClientId: mcpConnection.clientId,
+          mcpServer: {
+            host: defaultServer.mcp_host,
+            port: defaultServer.mcp_port
+          },
+          options: {
+            stream: true,
+            temperature: 0.7,
+            max_tokens: 2000
+          }
+        },
+        // onChunk
+        (chunk) => {
+          if (chunk.choices?.[0]?.delta?.content) {
+            streamedContentRef.current[assistantMessageId] += chunk.choices[0].delta.content;
+            
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: streamedContentRef.current[assistantMessageId] }
+                : msg
+            ));
+          }
+        },
+        // onComplete
+        async () => {
+          const finalContent = streamedContentRef.current[assistantMessageId];
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: finalContent, isStreaming: false }
+              : msg
+          ));
+
+          // Save the assistant message to database
+          if (activeSessionId && finalContent) {
+            try {
+              await chatbotService.sendMessage(
+                '',
+                activeSessionId,
+                finalContent,
+                false
+              );
+              console.log('MCP assistant message saved to database');
+            } catch (error) {
+              console.error('Error saving MCP assistant message to database:', error);
+            }
+          }
+
+          setIsStreaming(false);
+          setIsLoading(false);
+          abortFunctionRef.current = null;
+          delete streamedContentRef.current[assistantMessageId];
+        },
+        // onError
+        (error) => {
+          console.error('MCP chat streaming error:', error);
+          
+          const errorContent = `Error: ${error.message}`;
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: errorContent, isStreaming: false }
+              : msg
+          ));
+
+          setIsStreaming(false);
+          setIsLoading(false);
+          abortFunctionRef.current = null;
+          delete streamedContentRef.current[assistantMessageId];
+        }
+      );
+
+      // Store abort function for potential cancellation
+      abortFunctionRef.current = abortFunction;
+
+    } catch (error: any) {
+      console.error('Error initializing MCP chat:', error);
+      
+      const errorContent = `Error: ${error.message}`;
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: errorContent, isStreaming: false }
+          : msg
+      ));
+
+      setIsStreaming(false);
+      setIsLoading(false);
+      abortFunctionRef.current = null;
+      delete streamedContentRef.current[assistantMessageId];
+      
+      throw error;
+    }
   };
 
   // Tool execution state
@@ -339,7 +484,7 @@ const Chatbot: React.FC = () => {
               isContextMessage: true
             };
             
-            setMessages(prev => {
+              setMessages(prev => {
               const hasSimilarMessage = prev.some(msg => 
                 msg.role === 'system' && 
                 msg.content.includes('User context loaded:')
@@ -347,16 +492,16 @@ const Chatbot: React.FC = () => {
               
               if (hasSimilarMessage) {
                 console.log('Similar system message already exists, not adding another one');
-                return prev;
-              }
+                  return prev;
+                }
 
               return [...prev, systemContextMessage];
             });
             
             contextRulesLoadedRef.current[activeSessionId] = true;
-          }
-        }
-      } catch (error) {
+              }
+            }
+          } catch (error) {
         console.error('Error checking for stored context rules:', error);
       }
     }
@@ -411,9 +556,9 @@ const Chatbot: React.FC = () => {
               
               contextRulesLoadedRef.current[activeSessionId] = true;
             }, 500);
-          }
         }
-      } catch (error) {
+      }
+    } catch (error) {
         console.error('Error checking for stored context rules:', error);
       }
     } else {
@@ -443,7 +588,7 @@ const Chatbot: React.FC = () => {
       const { message } = event.detail;
       console.log('Adding system message to conversation:', message);
       
-      setMessages(prev => {
+        setMessages(prev => {
         const hasSimilarMessage = prev.some(msg => 
           msg.role === 'system' && 
           msg.content.includes('User context loaded:')
@@ -711,7 +856,7 @@ const Chatbot: React.FC = () => {
 
         console.log('User SQL query message:', userMessage);
         setMessages(prev => [...prev, userMessage]);
-        
+
         // Save Chat2SQL user message to localStorage
         if (activeSessionId) {
           saveChat2SqlMessage(activeSessionId, userMessage);
@@ -864,7 +1009,7 @@ const Chatbot: React.FC = () => {
         const errorMessage: ExtendedChatMessage = {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: `Error: ${error.message}. Falling back to normal chat.`,
+          content: `MCP Error: ${error.message}`,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
@@ -883,6 +1028,9 @@ const Chatbot: React.FC = () => {
             console.error('Error saving MCP error message to database:', dbError);
           }
         }
+        
+        // Return early to prevent falling back to normal chat
+        return;
       }
     }
 
@@ -921,7 +1069,7 @@ const Chatbot: React.FC = () => {
     if (!isMCPEnabled && !isMCPConnected) {
       setShowServerSelector(true);
     } else {
-      toggleMCPEnabled();
+    toggleMCPEnabled();
     }
   };
 
@@ -981,13 +1129,13 @@ const Chatbot: React.FC = () => {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-3">
             <UserIcon size={36} variant="default" />
-            <h2
-              className="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-none"
-              style={{ color: 'var(--color-text)' }}
-            >
-              {activeSessionId ? sessionTitle : 'New Chat'}
-            </h2>
-          </div>
+              <h2
+                className="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-none"
+                style={{ color: 'var(--color-text)' }}
+              >
+                {activeSessionId ? sessionTitle : 'New Chat'}
+              </h2>
+            </div>
         </div>
 
         <div className="flex items-center space-x-4">

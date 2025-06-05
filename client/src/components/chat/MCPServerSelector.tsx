@@ -511,11 +511,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             >
               <CheckCircleIcon className="w-4 h-4 text-white" />
             </div>
-            <div>
+          <div>
               <p className="font-semibold" style={{ color: statusColors.connected.text }}>Direct SSE Connection Successful!</p>
               <p className="text-sm mt-1" style={{ color: mutedTextColor }}>Client ID: {directSseSuccess}</p>
-            </div>
           </div>
+        </div>
         </motion.div>
       );
     }
@@ -549,11 +549,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             >
               <ArrowPathIcon className="w-4 h-4 text-white" />
             </motion.div>
-            <div>
+          <div>
               <p className="font-semibold" style={{ color: isLight ? '#1e3a8a' : isMidnight ? '#93c5fd' : '#dbeafe' }}>Initializing WebSocket connection...</p>
               <p className="text-sm mt-1" style={{ color: mutedTextColor }}>This step is required before connecting to the MCP server.</p>
-            </div>
           </div>
+        </div>
         </motion.div>
       );
     }
@@ -585,11 +585,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             >
               <ArrowPathIcon className="w-4 h-4 text-white" />
             </motion.div>
-            <div>
+          <div>
               <p className="font-semibold" style={{ color: isLight ? '#1e3a8a' : isMidnight ? '#93c5fd' : '#dbeafe' }}>Establishing MCP connection...</p>
               <p className="text-sm mt-1" style={{ color: mutedTextColor }}>Connecting to server and acquiring client ID.</p>
-            </div>
           </div>
+        </div>
         </motion.div>
       );
     }
@@ -615,11 +615,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             >
               <CheckCircleIcon className="w-4 h-4 text-white" />
             </div>
-            <div>
+          <div>
               <p className="font-semibold" style={{ color: statusColors.connected.text }}>Connection successful!</p>
               <p className="text-sm mt-1" style={{ color: mutedTextColor }}>Client ID acquired. Redirecting to chat...</p>
-            </div>
           </div>
+        </div>
         </motion.div>
       );
     }
@@ -651,7 +651,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             <ArrowPathIcon className="w-4 h-4 text-white" />
           </motion.div>
           <span style={{ color: isLight ? '#1e3a8a' : isMidnight ? '#93c5fd' : '#dbeafe' }}>Establishing connection to server...</span>
-        </div>
+      </div>
       </motion.div>
     );
   };
@@ -734,14 +734,14 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
     // Return just the server items without additional container
     return servers.map((server, index) => (
       <motion.div
-        key={server.id}
+            key={server.id}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.1 }}
         className={`p-4 rounded-xl backdrop-blur-md cursor-pointer transition-all ${
           selectedServerId === server.id ? 'mcp-glow' : ''
-        }`}
-        style={{
+            }`}
+            style={{
           background: selectedServerId === server.id 
             ? (isLight 
                ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12))'
@@ -759,8 +759,8 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
           borderLeft: selectedServerId === server.id 
             ? `4px solid ${isMidnight ? '#a78bfa' : '#6366f1'}`
             : '4px solid transparent',
-        }}
-        onClick={() => setSelectedServerId(server.id)}
+            }}
+            onClick={() => setSelectedServerId(server.id)}
         whileHover={{ 
           scale: 1.01,
           boxShadow: isLight 
@@ -771,18 +771,18 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
         }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex-1">
+            <div className="flex-1">
             <div className="font-semibold mb-2" style={{ color: textColor }}>{server.mcp_nickname}</div>
             <div className="text-sm flex items-center" style={{ color: mutedTextColor }}>
               <ServerIcon className="w-4 h-4 mr-2" />
-              {server.mcp_host}:{server.mcp_port}
-            </div>
+                {server.mcp_host}:{server.mcp_port}
+              </div>
             {server.tools_count !== undefined && (
               <div className="text-xs mt-1" style={{ color: mutedTextColor, opacity: 0.8 }}>
                 {server.tools_count} tools available
-              </div>
+            </div>
             )}
-          </div>
+                </div>
           
           <div className="flex items-center space-x-3">
             {/* Status Badge */}
@@ -815,16 +815,16 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
               <div className="flex items-center space-x-1">
                 {server.mcp_connection_status === 'connected' ? (
                   <CheckCircleIcon className="w-3 h-3" />
-                ) : server.mcp_connection_status === 'error' ? (
+              ) : server.mcp_connection_status === 'error' ? (
                   <ExclamationCircleIcon className="w-3 h-3" />
-                ) : server.mcp_connection_status === 'connecting' ? (
+              ) : server.mcp_connection_status === 'connecting' ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
                     <ArrowPathIcon className="w-3 h-3" />
                   </motion.div>
-                ) : (
+              ) : (
                   <InformationCircleIcon className="w-3 h-3" />
                 )}
                 <span>
@@ -839,11 +839,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
 
             {/* Test Button */}
             <motion.button
-              onClick={e => {
-                e.stopPropagation();
-                testConnection(server);
-              }}
-              disabled={testingServer === server.id || connecting}
+                onClick={e => {
+                  e.stopPropagation();
+                  testConnection(server);
+                }}
+                disabled={testingServer === server.id || connecting}
               className="p-2 rounded-lg backdrop-blur-md"
               style={{
                 background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.3)' : 'rgba(42, 51, 73, 0.25)',
@@ -856,20 +856,20 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
               } : {}}
               whileTap={!(testingServer === server.id || connecting) ? { scale: 0.9 } : {}}
               title="Test connection"
-            >
-              {testingServer === server.id ? (
+              >
+                {testingServer === server.id ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 >
                   <ArrowPathIcon className="w-4 h-4" style={{ color: textColor }} />
                 </motion.div>
-              ) : (
+                ) : (
                 <ArrowPathIcon className="w-4 h-4" style={{ color: textColor }} />
-              )}
+                )}
             </motion.button>
+            </div>
           </div>
-        </div>
       </motion.div>
     ));
   };
@@ -892,7 +892,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
             className="relative max-w-2xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
-            style={{
+        style={{
               background: cardBackground,
               backdropFilter: 'blur(20px)',
               border: cardBorder,
@@ -925,7 +925,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
               }}
             />
 
-            {/* Header */}
+        {/* Header */}
             <div
               className="p-6 border-b relative overflow-hidden"
               style={{
@@ -957,7 +957,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                 </div>
 
                 <motion.button
-                  onClick={onClose}
+            onClick={onClose}
                   className="p-2 rounded-lg backdrop-blur-md"
                   style={{
                     background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.25)' : 'rgba(42, 51, 73, 0.2)',
@@ -968,19 +968,19 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                     background: isLight ? 'rgba(148, 163, 184, 0.25)' : isMidnight ? 'rgba(55, 65, 81, 0.35)' : 'rgba(42, 51, 73, 0.3)'
                   }}
                   whileTap={{ scale: 0.98 }}
-                >
+          >
                   <XMarkIcon className="w-5 h-5" style={{ color: textColor }} />
                 </motion.button>
               </div>
-            </div>
+        </div>
 
-            {/* Body */}
+        {/* Body */}
             <div className="p-6 overflow-y-auto mcp-scrollbar" style={{ maxHeight: 'calc(90vh - 200px)' }}>
-              {/* Connection status indicator */}
-              {renderConnectionStatus()}
-              
-              {/* SSE Connection Status */}
-              {sseConnectionStatus && !connecting && (
+          {/* Connection status indicator */}
+          {renderConnectionStatus()}
+          
+          {/* SSE Connection Status */}
+          {sseConnectionStatus && !connecting && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -988,7 +988,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                   style={{
                     background: sseConnectionStatus === 'connected' 
                       ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))'
-                      : sseConnectionStatus === 'error'
+                : sseConnectionStatus === 'error'
                         ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05))'
                         : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))',
                     border: `1px solid ${
@@ -1011,44 +1011,44 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         }`,
                       }}
                     >
-                      {sseConnectionStatus === 'connected' ? (
+              {sseConnectionStatus === 'connected' ? (
                         <CheckCircleIcon className="w-4 h-4 text-white" />
-                      ) : sseConnectionStatus === 'error' ? (
+              ) : sseConnectionStatus === 'error' ? (
                         <ExclamationCircleIcon className="w-4 h-4 text-white" />
-                      ) : (
+              ) : (
                         <InformationCircleIcon className="w-4 h-4 text-white" />
-                      )}
+              )}
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold mb-1" style={{ color: textColor }}>
-                        {sseConnectionStatus === 'connected' 
-                          ? 'Connected to MCP Server'
-                          : sseConnectionStatus === 'error'
-                            ? 'MCP Connection Error'
-                            : sseConnectionStatus === 'connecting'
-                              ? 'Connecting to MCP Server...'
-                              : 'MCP Connection Status'}
-                      </p>
+                  {sseConnectionStatus === 'connected' 
+                    ? 'Connected to MCP Server'
+                    : sseConnectionStatus === 'error'
+                      ? 'MCP Connection Error'
+                      : sseConnectionStatus === 'connecting'
+                        ? 'Connecting to MCP Server...'
+                        : 'MCP Connection Status'}
+                </p>
                       <p className="text-sm leading-relaxed" style={{ color: mutedTextColor }}>
-                        {sseConnectionStatus === 'connected' 
-                          ? `Successfully established SSE connection${mcpConnection.clientId ? ` with client ID: ${mcpConnection.clientId}` : ''}`
-                          : sseConnectionStatus === 'error'
-                            ? 'Failed to establish SSE connection. Please try another server or check your network.'
-                            : sseConnectionStatus === 'connecting'
-                              ? 'Attempting to establish direct connection with the SSE endpoint...'
-                              : 'No active MCP connection.'}
-                      </p>
-                      {mcpConnection.clientId && sseConnectionStatus === 'connected' && (
+                  {sseConnectionStatus === 'connected' 
+                    ? `Successfully established SSE connection${mcpConnection.clientId ? ` with client ID: ${mcpConnection.clientId}` : ''}`
+                    : sseConnectionStatus === 'error'
+                      ? 'Failed to establish SSE connection. Please try another server or check your network.'
+                      : sseConnectionStatus === 'connecting'
+                        ? 'Attempting to establish direct connection with the SSE endpoint...'
+                        : 'No active MCP connection.'}
+                </p>
+                {mcpConnection.clientId && sseConnectionStatus === 'connected' && (
                         <div className="mt-2 px-3 py-1 rounded-md bg-white/10 inline-block">
                           <p className="text-xs font-mono" style={{ color: textColor }}>Client ID: {mcpConnection.clientId}</p>
                         </div>
-                      )}
-                    </div>
-                  </div>
+                )}
+              </div>
+            </div>
                 </motion.div>
-              )}
+          )}
 
-              {/* Instructions */}
+          {/* Instructions */}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1073,19 +1073,19 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                   >
                     <InformationCircleIcon className="w-4 h-4 text-white" />
                   </div>
-                  <div>
+              <div>
                     <p className="font-semibold mb-2" style={{ color: textColor }}>How to Connect</p>
                     <ol className="list-decimal pl-5 space-y-1 text-sm" style={{ color: mutedTextColor }}>
                       <li>Select a server from the list below</li>
                       <li>Click the test button (🔄) to verify connection</li>
                       <li>Connection will be established automatically after successful test</li>
-                    </ol>
-                  </div>
-                </div>
+                </ol>
+              </div>
+            </div>
               </motion.div>
 
-              {/* Error message */}
-              {error && (
+          {/* Error message */}
+          {error && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1098,19 +1098,19 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                   <div className="flex items-start space-x-3">
                     <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: statusColors.error.text }} />
                     <div className="text-sm leading-relaxed" style={{ color: statusColors.error.text }}>{error}</div>
-                  </div>
+            </div>
                 </motion.div>
-              )}
+          )}
 
-              {/* Server list section */}
-              {!showDirectConnect && (
-                <>
+          {/* Server list section */}
+          {!showDirectConnect && (
+            <>
                   <div className="mb-4 flex justify-between items-center">
                     <h4 className="text-lg font-semibold" style={{ color: textColor }}>Available Servers</h4>
                     <motion.button
                       onClick={fetchServers}
                       className="px-3 py-2 rounded-lg backdrop-blur-md text-sm font-medium"
-                      style={{
+                  style={{
                         background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.25)' : 'rgba(42, 51, 73, 0.2)',
                         border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                         color: textColor,
@@ -1118,13 +1118,13 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                       whileHover={{ 
                         scale: 1.02,
                         background: isLight ? 'rgba(148, 163, 184, 0.25)' : isMidnight ? 'rgba(55, 65, 81, 0.35)' : 'rgba(42, 51, 73, 0.3)'
-                      }}
+                  }}
                       whileTap={{ scale: 0.95 }}
-                    >
+                >
                       <ArrowPathIcon className="w-4 h-4 mr-1 inline" />
-                      Refresh
+                  Refresh
                     </motion.button>
-                  </div>
+              </div>
 
                   {/* Smart server list with conditional scrolling */}
                   <div 
@@ -1134,14 +1134,14 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                       minHeight: servers.length > 0 ? 'auto' : '8rem'
                     }}
                   >
-                    {renderServerList()}
+              {renderServerList()}
                   </div>
 
                   <div className="flex items-center justify-center mt-6">
                     <motion.button
                       onClick={() => setShowDirectConnect(true)}
                       className="px-6 py-3 rounded-xl backdrop-blur-md text-sm font-medium"
-                      style={{
+                  style={{
                         background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.25)' : 'rgba(42, 51, 73, 0.2)',
                         border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                         color: textColor,
@@ -1151,16 +1151,16 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         background: isLight ? 'rgba(148, 163, 184, 0.25)' : isMidnight ? 'rgba(55, 65, 81, 0.35)' : 'rgba(42, 51, 73, 0.3)'
                       }}
                       whileTap={{ scale: 0.95 }}
-                    >
+                >
                       <PlusIcon className="w-4 h-4 mr-2 inline" />
                       Create New Connection
                     </motion.button>
-                  </div>
-                </>
-              )}
+              </div>
+            </>
+          )}
 
-              {/* Direct connection form */}
-              {showDirectConnect && (
+          {/* Direct connection form */}
+          {showDirectConnect && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1171,7 +1171,7 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                     <motion.button
                       onClick={() => setShowDirectConnect(false)}
                       className="px-3 py-2 rounded-lg backdrop-blur-md text-sm"
-                      style={{
+                  style={{
                         background: isLight ? 'rgba(148, 163, 184, 0.15)' : isMidnight ? 'rgba(55, 65, 81, 0.25)' : 'rgba(42, 51, 73, 0.2)',
                         border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                         color: textColor,
@@ -1181,23 +1181,23 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         background: isLight ? 'rgba(148, 163, 184, 0.25)' : isMidnight ? 'rgba(55, 65, 81, 0.35)' : 'rgba(42, 51, 73, 0.3)'
                       }}
                       whileTap={{ scale: 0.95 }}
-                    >
+                >
                       ← Back to List
                     </motion.button>
-                  </div>
+              </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: mutedTextColor }}>
-                        Server Name
-                      </label>
+                  Server Name
+                </label>
                       <motion.input
-                        type="text"
-                        placeholder="My MCP Server"
-                        value={directName}
-                        onChange={e => setDirectName(e.target.value)}
+                  type="text"
+                  placeholder="My MCP Server"
+                  value={directName}
+                  onChange={e => setDirectName(e.target.value)}
                         className="w-full p-3 rounded-xl backdrop-blur-md mcp-input"
-                        style={{
+                  style={{
                           background: isLight ? 'rgba(255, 255, 255, 0.9)' : isMidnight ? 'rgba(17, 24, 39, 0.8)' : 'rgba(35, 42, 61, 0.6)',
                           border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                           color: textColor,
@@ -1205,21 +1205,21 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         whileFocus={{
                           scale: 1.01,
                           boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)',
-                        }}
-                      />
-                    </div>
+                  }}
+                />
+              </div>
 
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: mutedTextColor }}>
-                        Host Address
-                      </label>
+                  Host Address
+                </label>
                       <motion.input
-                        type="text"
-                        placeholder="192.168.1.100 or localhost"
-                        value={directHost}
-                        onChange={e => setDirectHost(e.target.value)}
+                  type="text"
+                  placeholder="192.168.1.100 or localhost"
+                  value={directHost}
+                  onChange={e => setDirectHost(e.target.value)}
                         className="w-full p-3 rounded-xl backdrop-blur-md mcp-input"
-                        style={{
+                  style={{
                           background: isLight ? 'rgba(255, 255, 255, 0.9)' : isMidnight ? 'rgba(17, 24, 39, 0.8)' : 'rgba(35, 42, 61, 0.6)',
                           border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                           color: textColor,
@@ -1227,21 +1227,21 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         whileFocus={{
                           scale: 1.01,
                           boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)',
-                        }}
-                      />
-                    </div>
+                  }}
+                />
+              </div>
 
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: mutedTextColor }}>
-                        Port
-                      </label>
+                  Port
+                </label>
                       <motion.input
-                        type="text"
-                        placeholder={defaultMCPPort || '8080'}
-                        value={directPort}
-                        onChange={e => setDirectPort(e.target.value)}
+                  type="text"
+                  placeholder={defaultMCPPort || '8080'}
+                  value={directPort}
+                  onChange={e => setDirectPort(e.target.value)}
                         className="w-full p-3 rounded-xl backdrop-blur-md mcp-input"
-                        style={{
+                  style={{
                           background: isLight ? 'rgba(255, 255, 255, 0.9)' : isMidnight ? 'rgba(17, 24, 39, 0.8)' : 'rgba(35, 42, 61, 0.6)',
                           border: `1px solid ${isLight ? 'rgba(148, 163, 184, 0.3)' : isMidnight ? 'rgba(55, 65, 81, 0.4)' : 'rgba(42, 51, 73, 0.4)'}`,
                           color: textColor,
@@ -1249,20 +1249,20 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         whileFocus={{
                           scale: 1.01,
                           boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)',
-                        }}
-                      />
-                    </div>
+                  }}
+                />
+              </div>
 
                     <motion.button
                       onClick={handleDirectConnect}
                       disabled={directConnecting || connecting || loading}
                       className="w-full py-4 rounded-xl backdrop-blur-md text-sm font-bold"
-                      style={{
+                  style={{
                         background: (directConnecting || connecting || loading)
                           ? 'rgba(148, 163, 184, 0.15)'
                           : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: 'white',
+                    color: 'white',
                         opacity: (directConnecting || connecting || loading) ? 0.7 : 1,
                       }}
                       whileHover={!(directConnecting || connecting || loading) ? { 
@@ -1270,8 +1270,8 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         boxShadow: '0 0 25px rgba(99, 102, 241, 0.4)'
                       } : {}}
                       whileTap={!(directConnecting || connecting || loading) ? { scale: 0.98 } : {}}
-                    >
-                      {directConnecting || (connecting && !selectedServerId) ? (
+                >
+                  {directConnecting || (connecting && !selectedServerId) ? (
                         <div className="flex items-center justify-center space-x-2">
                           <motion.div
                             animate={{ rotate: 360 }}
@@ -1281,11 +1281,11 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                           </motion.div>
                           <span>Testing & Connecting...</span>
                         </div>
-                      ) : (
+                  ) : (
                         <div className="flex items-center justify-center space-x-2">
                           <ServerIcon className="w-5 h-5" />
                           <span>Test & Connect</span>
-                        </div>
+              </div>
                       )}
                     </motion.button>
 
@@ -1306,13 +1306,13 @@ const MCPServerSelector: React.FC<MCPServerSelectorProps> = ({
                         <div className="text-sm leading-relaxed" style={{ color: mutedTextColor }}>
                           <p className="font-medium mb-1">Quick Connect</p>
                           <p>This will test the server connection and automatically connect if successful. The server configuration will be saved for future use.</p>
-                        </div>
-                      </div>
-                    </motion.div>
                   </div>
+                </div>
+                    </motion.div>
+              </div>
                 </motion.div>
-              )}
-            </div>
+          )}
+        </div>
           </motion.div>
         </motion.div>
       )}

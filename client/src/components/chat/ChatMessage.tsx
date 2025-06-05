@@ -22,6 +22,7 @@ import { RagSource } from '../../services/ragChatService';
 import { containsReadContextToolCall, extractToolCall, containsShellCommandToolCall, extractShellCommand } from '../../utils/toolParser';
 import ContextReadingButton from './ContextReadingButton';
 import ShellCommandResult from './ShellCommandResult';
+import ShellCommandButton from './ShellCommandButton';
 import UserIcon from '../UserIcon';
 
 interface ChatMessageProps {
@@ -884,6 +885,25 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isAI = false, conver
                 {/* Use the new ShellCommandResult component for better presentation */}
                 {shellCommandResult && (
                   <ShellCommandResult result={shellCommandResult} />
+                )}
+              </>
+            ) : hasShellCommandTool && !shellCommandResult ? (
+              // Show the shell command button (Run/Decline) if tool detected but not yet executed
+              <>
+                <div>
+                  {/* Display the message content up to the tool call */}
+                  {message.content.split(/\{[^}]*"tool"[^}]*"runshellcommand"/i)[0]}
+                </div>
+
+                {/* Show the shell command button for user interaction */}
+                {shellCommand && (
+                  <ShellCommandButton
+                    command={shellCommand}
+                    onComplete={handleShellCommandComplete}
+                    messageId={message.id}
+                    conversationId={conversationId}
+                    toolText={extractToolText()}
+                  />
                 )}
               </>
             ) : message.isSqlResult ? (

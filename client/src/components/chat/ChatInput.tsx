@@ -345,8 +345,8 @@ The model is now ready for predictions! Type **"predict"** to generate route tab
       
       // Send the user message with Chat2SQL metadata (don't send to main AI)
       onSendMessage(message, undefined, {
-        chat2sql: true,
-        isUserMessage: true,
+          chat2sql: true,
+          isUserMessage: true,
         timestamp: new Date().toISOString(),
         id: `chat2sql-user-${Date.now()}`
       });
@@ -357,7 +357,7 @@ The model is now ready for predictions! Type **"predict"** to generate route tab
         // Call the Chat2SQL API
         const result = await fetchChat2SqlResult(message, currentSessionId);
         console.log('Chat2SQL result received:', result);
-        
+
         // Then send the AI response with the SQL result
         onSendMessage(result.data, undefined, {
           chat2sql: true,
