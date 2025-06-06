@@ -12,9 +12,10 @@ import uvicorn
 import asyncio
 import logging
 import re
-import requests
+#import requests
 import os
 from psycopg2 import pool
+import httpx
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -74,7 +75,7 @@ class QueryResponse(BaseModel):
 # Create a connection pool
 connection_pool = pool.ThreadedConnectionPool(
     minconn=1,
-    maxconn=20,  # Maximum number of connections
+    maxconn=50,  # Increased from 20 to 50
     host=DB_CONFIG['host'],
     database=DB_CONFIG['database'],
     user=DB_CONFIG['user'],
@@ -176,7 +177,6 @@ async def get_database_schema() -> Dict[str, Any]:
 async def generate_sql_with_ollama(query: str, schema: Dict[str, Any]) -> str:
     """Generate SQL query from natural language using Ollama."""
     try:
-        # Prepare the prompt for Ollama
         prompt = f"""Given the following database schema:
 {json.dumps(schema, indent=2)}
 
@@ -201,35 +201,31 @@ SQL Query:"""
 
         logger.info(f"Sending prompt to Ollama: {prompt}")
 
-        # Call Ollama API
-        response = requests.post(
-            OLLAMA_API_URL,
-            json={
-                "model": MODEL_NAME,
-                "prompt": prompt,
-                "stream": False
-            }
-        )
-        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": MODEL_NAME,
+                    "prompt": prompt,
+                    "stream": False
+                },
+                timeout=60
+            )
         if response.status_code != 200:
             logger.error(f"Ollama API error: {response.text}")
             raise Exception("Failed to generate SQL query")
-            
         result = response.json()
         sql_query = result.get('response', '').strip()
         logger.info(f"Raw Ollama response: {sql_query}")
-        
+
         # Clean up the SQL query
         sql_query = re.sub(r'```sql|```', '', sql_query)
         sql_query = sql_query.split(';')[0] + ';'
         sql_query = sql_query.replace('`', '')
-        
-        # Fix common schema-related errors
         sql_query = sql_query.replace('schema_name', 'table_schema')
-        
         logger.info(f"Cleaned SQL query: {sql_query}")
         return sql_query
-        
+
     except Exception as e:
         logger.error(f"Error generating SQL: {str(e)}")
         raise Exception(f"Failed to generate SQL query: {str(e)}")
