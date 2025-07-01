@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Database Configuration
 DB_CONFIG = {
-    'host': '172.16.16.54',
+    'host': '192.168.2.111',  # <-- Use your host's IP address here
     'database': 'chatsqldb',
     'user': 'postgres',
     'password': 'root',
