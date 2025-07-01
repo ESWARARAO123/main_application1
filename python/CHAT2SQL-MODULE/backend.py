@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 # Database Configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'copilot',
+    'host': '172.16.16.54',
+    'database': 'chatsqldb',
     'user': 'postgres',
-    'password': 'Welcom@123',
+    'password': 'root',
     'port': '5432'
 }
 
