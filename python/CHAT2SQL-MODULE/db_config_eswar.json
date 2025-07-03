@@ -1,0 +1,1 @@
+{"host": "localhost", "database": "master_db", "user": "postgres", "password": "root", "port": 5432}
