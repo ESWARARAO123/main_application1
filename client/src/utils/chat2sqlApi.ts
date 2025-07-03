@@ -70,6 +70,18 @@ const cleanChat2SqlResponse = (data: string): string => {
   }
 };
 
+// Helper to get username from localStorage (assumes user info is stored as 'user')
+function getUsername() {
+  try {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const parsed = JSON.parse(user);
+      return parsed.username || 'default';
+    }
+  } catch {}
+  return 'default';
+}
+
 export const fetchChat2SqlResult = async (query: string, sessionId?: string): Promise<Chat2SqlResponse> => {
   try {
     console.log('🔍 Sending chat2sql request:', query, 'Session ID:', sessionId);
@@ -120,7 +132,8 @@ export const fetchChat2SqlResult = async (query: string, sessionId?: string): Pr
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'x-username': getUsername()
       },
       body: JSON.stringify(requestBody)
     });

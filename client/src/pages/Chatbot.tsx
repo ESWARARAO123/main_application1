@@ -1166,6 +1166,18 @@ const Chatbot: React.FC = () => {
     };
   }, []);
 
+  // Helper to get username from localStorage (assumes user info is stored as 'user')
+  function getUsername() {
+    try {
+      const user = localStorage.getItem('user');
+      if (user) {
+        const parsed = JSON.parse(user);
+        return parsed.username || 'default';
+      }
+    } catch {}
+    return 'default';
+  }
+
   return (
     <div
       className="fixed inset-0 flex flex-col"
