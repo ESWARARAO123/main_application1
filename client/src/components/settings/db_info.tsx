@@ -125,23 +125,23 @@ const DBInfoSettings: React.FC = () => {
       <form className="space-y-4 max-w-md" onSubmit={handleTestConnection}>
         <div>
           <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Host</label>
-          <input type="text" name="host" value={form.host} onChange={handleChange} className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
+          <input type="text" name="host" value={form.host} onChange={handleChange} placeholder="localhost" className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Database</label>
-          <input type="text" name="database" value={form.database} onChange={handleChange} className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
+          <input type="text" name="database" value={form.database} onChange={handleChange} placeholder="copilot" className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>User</label>
-          <input type="text" name="user" value={form.user} onChange={handleChange} className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
+          <input type="text" name="user" value={form.user} onChange={handleChange} placeholder="postgres" className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Password</label>
-          <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
+          <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="" className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Port</label>
-          <input type="number" name="port" value={form.port} onChange={handleChange} className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
+          <input type="number" name="port" value={form.port} onChange={handleChange} placeholder="5432" className="w-full rounded px-3 py-2" style={{ backgroundColor: 'var(--color-surface-dark)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} required />
         </div>
         <button type="submit" disabled={loading} className="w-full px-4 py-2 rounded-lg mt-4 font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-md">
           {loading ? 'Testing...' : 'Test Connection'}
