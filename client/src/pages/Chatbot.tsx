@@ -28,6 +28,7 @@ import { chatbotService } from '../services/chatbotService';
 import TrainingForm from '../components/TrainingForm'; // Added for predictor training form
 import UserIcon from '../components/UserIcon';
 
+// Added for predictor functionality
 const Chatbot: React.FC = () => {
   const { isExpanded: isMainSidebarExpanded } = useSidebar();
 

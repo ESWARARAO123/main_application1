@@ -70,25 +70,63 @@ class QueryResponse(BaseModel):
     data: List[Dict[str, Any]]
     columns: List[str]
 
-def get_user_db_config(username: str) -> dict:
-    """Load DB config for a user from file."""
-    config_path = f"db_config_{username}.json"
-    if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            return json.load(f)
+def get_app_db_connection():
+    return psycopg2.connect(
+        host=os.environ.get("APP_DB_HOST", "localhost"),
+        database=os.environ.get("APP_DB_NAME", "copilot"),
+        user=os.environ.get("APP_DB_USER", "postgres"),
+        password=os.environ.get("APP_DB_PASSWORD", "root"),
+        port=int(os.environ.get("APP_DB_PORT", 5432))
+    )
+
+def get_user_db_config(user_id):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT host, database, db_user, db_password, port FROM database_details WHERE user_id = %s", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {
+            "host": row[0],
+            "database": row[1],
+            "user": row[2],
+            "password": row[3],
+            "port": row[4]
+        }
     return None
 
-def save_user_db_config(username: str, config: dict):
-    """Save DB config for a user to file."""
-    config_path = f"db_config_{username}.json"
-    with open(config_path, 'w') as f:
-        json.dump(config, f)
+def save_user_db_config_to_db(user_id: int, config: dict):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO database_details (user_id, host, database, db_user, db_password, port, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+            host = EXCLUDED.host,
+            database = EXCLUDED.database,
+            db_user = EXCLUDED.db_user,
+            db_password = EXCLUDED.db_password,
+            port = EXCLUDED.port,
+            updated_at = NOW()
+    """, (user_id, config['host'], config['database'], config['user'], config['password'], config['port']))
+    conn.commit()
+    conn.close()
+
+def get_user_id_from_username(username: str):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return row[0]  # UUID
+    return None
 
 # --- API endpoints for DB config ---
 @app.get("/api/db-config")
 async def get_db_config(x_username: Optional[str] = Header(None)):
     username = x_username or 'default'
-    config = get_user_db_config(username)
+    config = get_user_db_config(x_username)
     if not config:
         return JSONResponse(content={}, headers={"Content-Type": "application/json"})
     return JSONResponse(content=config, headers={"Content-Type": "application/json"})
@@ -96,6 +134,9 @@ async def get_db_config(x_username: Optional[str] = Header(None)):
 @app.post("/api/db-config")
 async def set_db_config(request: Request, x_username: Optional[str] = Header(None), x_db_test: Optional[str] = Header(None)):
     username = x_username or 'default'
+    user_id = get_user_id_from_username(username)
+    if not user_id:
+        return JSONResponse(status_code=400, content={"error": "User not found."})
     body = await request.json()
     required = ['host', 'database', 'user', 'password', 'port']
     if not all(k in body and body[k] for k in required):
@@ -121,7 +162,7 @@ async def set_db_config(request: Request, x_username: Optional[str] = Header(Non
         logger.info(f"[DB-CONFIG] Connection test passed for user {username} (not saved)")
         return JSONResponse(content={"success": True}, headers={"Content-Type": "application/json"})
     # Otherwise, save config
-    save_user_db_config(username, body)
+    save_user_db_config_to_db(user_id, body)
     logger.info(f"[DB-CONFIG] Settings saved for user {username}")
     return JSONResponse(content={"success": True}, headers={"Content-Type": "application/json"})
 
@@ -400,7 +441,7 @@ async def execute_query_endpoint(request: Request, x_username: Optional[str] = H
         query = body.get('query')
         session_id = body.get('sessionId')
         username = x_username or 'default'
-        user_config = get_user_db_config(username)
+        user_config = get_user_db_config(x_username)
         if not user_config:
             return JSONResponse(status_code=400, content={"error": "Database is not configured. Please set it in Settings."})
         if not query:
