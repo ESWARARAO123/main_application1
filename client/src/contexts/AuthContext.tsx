@@ -28,10 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.get('/auth/me');
       setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error: any) {
-      // Only set user to null if it's a 401 error or network error
       if (error.response?.status === 401 || !error.response) {
         setUser(null);
+        localStorage.removeItem('user');
       }
     } finally {
       setLoading(false);
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
       setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
     } finally {
       setLoading(false);
     }
@@ -72,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post('/auth/logout');
     } finally {
       setUser(null);
+      localStorage.removeItem('user');
       setLoading(false);
     }
   };

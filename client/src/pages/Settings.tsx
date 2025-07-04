@@ -15,6 +15,7 @@ import OllamaSettings from '../components/settings/OllamaSettings';
 import MCPSettings from '../components/settings/MCPSettings';
 import DebuggingSettings from '../components/settings/DebuggingSettings';
 import AIRulesSettings from '../components/settings/AIRulesSettings';
+import DBInfoSettings from '../components/settings/db_info';
 
 // Import ThemeType from the ThemeContext
 type ThemeType = 'dark' | 'light' | 'midnight';
@@ -133,6 +134,7 @@ export default function Settings() {
     { id: 'ollama', name: 'LLM Integration', icon: ServerIcon },
     { id: 'mcp', name: 'MCP Integration', icon: CpuChipIcon },
     { id: 'debugging', name: 'Debugging', icon: BugAntIcon },
+    { id: 'db_info', name: 'Database Settings', icon: ServerIcon },
   ];
 
   return (
@@ -501,6 +503,10 @@ export default function Settings() {
               </p>
               <DebuggingSettings />
             </div>
+          )}
+
+          {activeTab === 'db_info' && (
+            <DBInfoSettings />
           )}
         </motion.div>
       </div>

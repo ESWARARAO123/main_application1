@@ -45,6 +45,7 @@ WORKDIR /app
 
 # Make Python scripts executable
 RUN chmod +x python/RAG-MODULE/installvenv.sh
+
 RUN ./python/RAG-MODULE/installvenv.sh
 
 # Make entrypoint script executable

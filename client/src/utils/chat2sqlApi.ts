@@ -60,7 +60,7 @@ const cleanChat2SqlResponse = (data: string): string => {
     result = result.replace(/To list all tables in your database using[\s\S]*?mysql[\s\S]*?command[\s\S]*?```json[\s\S]*?```/gi, '');
     result = result.replace(/Command Declined[\s\S]*?Command execution declined/gi, '');
     result = result.replace(/mysql -u \[username\][\s\S]*?SHOW TABLES[\s\S]*?;/gi, '');
-    result = result.replace(/⚬ Command execution declined/gi, '');
+    result = result.replace(/ ? Command execution declined/gi, '');
     
     return result.trim() || 'No data found.';
     
@@ -70,9 +70,21 @@ const cleanChat2SqlResponse = (data: string): string => {
   }
 };
 
+// Helper to get username from localStorage (assumes user info is stored as 'user')
+function getUsername() {
+  try {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const parsed = JSON.parse(user);
+      return parsed.username || 'default';
+    }
+  } catch {}
+  return 'default';
+}
+
 export const fetchChat2SqlResult = async (query: string, sessionId?: string): Promise<Chat2SqlResponse> => {
   try {
-    console.log('🔍 Sending chat2sql request:', query, 'Session ID:', sessionId);
+    console.log('?? Sending chat2sql request:', query, 'Session ID:', sessionId);
 
     // Get Chat2SQL URL from config.ini via backend API service
     let chat2sqlUrl: string;
@@ -101,10 +113,10 @@ export const fetchChat2SqlResult = async (query: string, sessionId?: string): Pr
       }
 
       chat2sqlUrl = config.chat2sqlUrl;
-      console.log('🎯 Using Chat2SQL URL from config service:', chat2sqlUrl);
+      console.log('?? Using Chat2SQL URL from config service:', chat2sqlUrl);
 
     } catch (configError) {
-      console.error('❌ Failed to load Chat2SQL configuration:', configError);
+      console.error('? Failed to load Chat2SQL configuration:', configError);
       throw new Error(`Chat2SQL configuration unavailable: ${configError instanceof Error ? configError.message : 'Unknown error'}`);
     }
 
@@ -113,29 +125,30 @@ export const fetchChat2SqlResult = async (query: string, sessionId?: string): Pr
       sessionId,
       timestamp: Date.now()
     };
-    console.log('📤 Request body:', requestBody);
+    console.log('?? Request body:', requestBody);
 
     const response = await fetch(`${chat2sqlUrl}/chat2sql/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'x-username': getUsername()
       },
       body: JSON.stringify(requestBody)
     });
 
-    console.log('📥 Response status from Python service:', response.status);
-    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('?? Response status from Python service:', response.status);
+    console.log('?? Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Python service error response:', errorText);
+      console.error('? Python service error response:', errorText);
       throw new Error(`Python Chat2SQL service failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('✅ Received data from Python service:', data);
+    console.log('? Received data from Python service:', data);
 
     // Clean the response data
     const cleanedData = {
@@ -143,7 +156,7 @@ export const fetchChat2SqlResult = async (query: string, sessionId?: string): Pr
       data: cleanChat2SqlResponse(data.data)
     };
 
-    console.log('🧹 Cleaned data:', cleanedData);
+    console.log('?? Cleaned data:', cleanedData);
     return cleanedData;
   } catch (error) {
     console.error('Error fetching chat2sql result:', error);

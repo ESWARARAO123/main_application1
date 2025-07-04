@@ -28,6 +28,7 @@ import { chatbotService } from '../services/chatbotService';
 import TrainingForm from '../components/TrainingForm'; // Added for predictor training form
 import UserIcon from '../components/UserIcon';
 
+// Added for predictor functionality
 const Chatbot: React.FC = () => {
   const { isExpanded: isMainSidebarExpanded } = useSidebar();
 
@@ -1166,6 +1167,18 @@ const Chatbot: React.FC = () => {
     };
   }, []);
 
+  // Helper to get username from localStorage (assumes user info is stored as 'user')
+  function getUsername() {
+    try {
+      const user = localStorage.getItem('user');
+      if (user) {
+        const parsed = JSON.parse(user);
+        return parsed.username || 'default';
+      }
+    } catch {}
+    return 'default';
+  }
+
   return (
     <div
       className="fixed inset-0 flex flex-col"
@@ -1347,7 +1360,7 @@ const Chatbot: React.FC = () => {
                     const welcomeMessage = {
                       id: `predictor-welcome-${Date.now()}`,
                       role: 'assistant' as const,
-                      content: `🤖 **Predictor Mode Activated**
+                      content: `?? **Predictor Mode Activated**
 
 I'm ready to help you train models and make predictions! 
 

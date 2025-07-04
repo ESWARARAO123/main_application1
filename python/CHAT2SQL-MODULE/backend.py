@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -20,15 +20,6 @@ from psycopg2 import pool
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database Configuration - Keep your original hardcoded values
-DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'chatsqldb',
-    'user': 'postgres',
-    'password': 'root',
-    'port': '5432'
-}
-
 # Ollama Configuration - Auto-detect Docker environment
 # Use host.docker.internal when running in Docker, localhost otherwise
 OLLAMA_HOST = "host.docker.internal" if os.path.exists('/.dockerenv') else "localhost"
@@ -36,7 +27,6 @@ OLLAMA_API_URL = f"http://{OLLAMA_HOST}:11434/api/generate"
 MODEL_NAME = "mistral"
 
 # Log configuration on startup
-logger.info(f"Database config: {DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}")
 logger.info(f"Ollama API URL: {OLLAMA_API_URL}")
 logger.info(f"Model: {MODEL_NAME}")
 logger.info(f"Running in Docker: {os.path.exists('/.dockerenv')}")
@@ -80,26 +70,123 @@ class QueryResponse(BaseModel):
     data: List[Dict[str, Any]]
     columns: List[str]
 
-# Create a connection pool
-connection_pool = pool.ThreadedConnectionPool(
-    minconn=1,
-    maxconn=20,  # Maximum number of connections
-    host=DB_CONFIG['host'],
-    database=DB_CONFIG['database'],
-    user=DB_CONFIG['user'],
-    password=DB_CONFIG['password'],
-    port=DB_CONFIG['port']
-)
+def get_app_db_connection():
+    return psycopg2.connect(
+        host=os.environ.get("APP_DB_HOST", "localhost"),
+        database=os.environ.get("APP_DB_NAME", "copilot"),
+        user=os.environ.get("APP_DB_USER", "postgres"),
+        password=os.environ.get("APP_DB_PASSWORD", "root"),
+        port=int(os.environ.get("APP_DB_PORT", 5432))
+    )
 
-def get_connection():
-    """Get a connection from the pool"""
+def get_user_db_config(user_id):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT host, database, db_user, db_password, port FROM database_details WHERE user_id = %s", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {
+            "host": row[0],
+            "database": row[1],
+            "user": row[2],
+            "password": row[3],
+            "port": row[4]
+        }
+    return None
+
+def save_user_db_config_to_db(user_id: int, config: dict):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO database_details (user_id, host, database, db_user, db_password, port, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+            host = EXCLUDED.host,
+            database = EXCLUDED.database,
+            db_user = EXCLUDED.db_user,
+            db_password = EXCLUDED.db_password,
+            port = EXCLUDED.port,
+            updated_at = NOW()
+    """, (user_id, config['host'], config['database'], config['user'], config['password'], config['port']))
+    conn.commit()
+    conn.close()
+
+def get_user_id_from_username(username: str):
+    conn = get_app_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return row[0]  # UUID
+    return None
+
+# --- API endpoints for DB config ---
+@app.get("/api/db-config")
+async def get_db_config(x_username: Optional[str] = Header(None)):
+    username = x_username or 'default'
+    config = get_user_db_config(x_username)
+    if not config:
+        return JSONResponse(content={}, headers={"Content-Type": "application/json"})
+    return JSONResponse(content=config, headers={"Content-Type": "application/json"})
+
+@app.post("/api/db-config")
+async def set_db_config(request: Request, x_username: Optional[str] = Header(None), x_db_test: Optional[str] = Header(None)):
+    username = x_username or 'default'
+    user_id = get_user_id_from_username(username)
+    if not user_id:
+        return JSONResponse(status_code=400, content={"error": "User not found."})
+    body = await request.json()
+    required = ['host', 'database', 'user', 'password', 'port']
+    if not all(k in body and body[k] for k in required):
+        logger.error(f"[DB-CONFIG] Missing fields for user {username}")
+        return JSONResponse(status_code=400, content={"error": "All fields are required."})
+    # Test connection
     try:
-        logger.info("Getting connection from pool...")
-        conn = connection_pool.getconn()
-        logger.info("Connection obtained from pool")
-        return conn
+        print(f"!!! DEBUG: Received: host={body['host']!r}, db={body['database']!r}, user={body['user']!r}, password={body['password']!r}, port={body['port']!r}")
+        logger.info(f"[DB-CONFIG] Received: host={body['host']!r}, db={body['database']!r}, user={body['user']!r}, password={body['password']!r}, port={body['port']!r}")
+        test_conn = psycopg2.connect(
+            host=body['host'],
+            database=body['database'],
+            user=body['user'],
+            password=body['password'],
+            port=body['port']
+        )
+        test_conn.close()
     except Exception as e:
-        logger.error(f"Failed to get connection from pool: {str(e)}")
+        logger.error(f"[DB-CONFIG] Connection failed for user {username}: {str(e)}")
+        return JSONResponse(status_code=400, content={"error": f"Connection failed: {str(e)}"})
+    # If x-db-test header is present and true, do not save
+    if x_db_test and x_db_test.lower() == 'true':
+        logger.info(f"[DB-CONFIG] Connection test passed for user {username} (not saved)")
+        return JSONResponse(content={"success": True}, headers={"Content-Type": "application/json"})
+    # Otherwise, save config
+    save_user_db_config_to_db(user_id, body)
+    logger.info(f"[DB-CONFIG] Settings saved for user {username}")
+    return JSONResponse(content={"success": True}, headers={"Content-Type": "application/json"})
+
+# --- Refactor connection logic ---
+def get_connection(user_config=None):
+    """Get a connection from the pool or direct using user config."""
+    try:
+        if user_config:
+            logger.info(f"Connecting with user config: {user_config}")
+            conn = psycopg2.connect(
+                host=user_config['host'],
+                database=user_config['database'],
+                user=user_config['user'],
+                password=user_config['password'],
+                port=user_config['port']
+            )
+            return conn
+        else:
+            logger.info("Getting connection from pool...")
+            conn = connection_pool.getconn()
+            logger.info("Connection obtained from pool")
+            return conn
+    except Exception as e:
+        logger.error(f"Failed to get connection: {str(e)}")
         raise Exception(f"Database connection failed: {str(e)}")
 
 def release_connection(conn):
@@ -347,14 +434,16 @@ SQL Query:"""
         raise Exception(f"Failed to generate SQL query: {str(e)}")
 
 @app.post("/chat2sql/execute")
-async def execute_query_endpoint(request: Request):
-    """Execute a natural language query and return the results."""
+async def execute_query_endpoint(request: Request, x_username: Optional[str] = Header(None)):
     try:
         # Parse request body
         body = await request.json()
         query = body.get('query')
-        session_id = body.get('sessionId')  # Get session ID from request
-        
+        session_id = body.get('sessionId')
+        username = x_username or 'default'
+        user_config = get_user_db_config(x_username)
+        if not user_config:
+            return JSONResponse(status_code=400, content={"error": "Database is not configured. Please set it in Settings."})
         if not query:
             logger.error("No query provided in request")
             return JSONResponse(
@@ -362,43 +451,29 @@ async def execute_query_endpoint(request: Request):
                 content={"detail": "Query parameter is required"},
                 headers={"Content-Type": "application/json"}
             )
-
         logger.info(f"Processing new query: {query}")
         logger.info(f"Request body: {body}")
-        
         # Get database schema
-        schema = await get_database_schema()
+        schema = await get_database_schema_with_user_config(user_config)
         logger.info(f"Retrieved schema with {len(schema['tables'])} tables")
-        
         # Generate SQL using Ollama
         sql_query = await generate_sql_with_ollama(query, schema)
         logger.info(f"Generated SQL for query '{query}': {sql_query}")
-        
         # Execute query
-        df = await execute_sql(sql_query)
+        df = await execute_sql_with_user_config(sql_query, user_config)
         logger.info(f"Query executed. DataFrame shape: {df.shape}")
-        
         # Format the data as a markdown table
         if not df.empty:
             logger.info(f"Creating table with {len(df)} rows and columns: {df.columns.tolist()}")
-            
-            # Create markdown table
             table = "| " + " | ".join(df.columns) + " |\n"
             table += "| " + " | ".join(["---"] * len(df.columns)) + " |\n"
-            
-            # Add table rows
             for _, row in df.iterrows():
-                # Convert all values to strings and handle None/null values
                 row_values = [str(val) if val is not None else '' for val in row]
                 table += "| " + " | ".join(row_values) + " |\n"
-            
         else:
             logger.warning(f"No data found for query: {query}")
             table = "No data found."
-        
-        # Clean the table data to remove any unwanted content that might have been added
         table = clean_response_data(table)
-        
         # Save messages to database if session_id is provided
         if session_id:
             try:
@@ -463,6 +538,72 @@ async def root():
             content={"status": "unhealthy", "service": "sql-executor", "error": str(e)},
             headers={"Content-Type": "application/json"}
         )
+
+# Helper: get schema and execute_sql with user config
+async def get_database_schema_with_user_config(user_config):
+    conn = None
+    try:
+        conn = get_connection(user_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                t.table_name,
+                obj_description(pgc.oid) as table_description,
+                pgc.reltuples as row_count
+            FROM information_schema.tables t
+            JOIN pg_class pgc ON pgc.relname = t.table_name
+            WHERE t.table_schema = 'public'
+        """)
+        tables = [{
+            "name": row[0],
+            "description": row[1],
+            "row_count": row[2]
+        } for row in cursor.fetchall()]
+        for table in tables:
+            cursor.execute("""
+                SELECT 
+                    column_name,
+                    data_type,
+                    column_default,
+                    is_nullable
+                FROM information_schema.columns 
+                WHERE table_name = %s 
+                AND table_schema = 'public'
+            """, (table["name"],))
+            table["columns"] = [{
+                "name": row[0],
+                "type": row[1],
+                "default": row[2],
+                "nullable": row[3]
+            } for row in cursor.fetchall()]
+        return {"tables": tables}
+    except Exception as e:
+        logger.error(f"Error getting database schema: {str(e)}")
+        return {"tables": []}
+    finally:
+        if conn:
+            conn.close()
+
+async def execute_sql_with_user_config(query: str, user_config) -> pd.DataFrame:
+    conn = None
+    try:
+        logger.info(f"Executing query: {query}")
+        conn = get_connection(user_config)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(query)
+        results = cursor.fetchall()
+        logger.info(f"Raw query results: {results}")
+        df = pd.DataFrame(results)
+        logger.info(f"DataFrame created with columns: {df.columns.tolist()}")
+        logger.info(f"DataFrame shape: {df.shape}")
+        logger.info(f"Query executed successfully. Found {len(df)} rows")
+        return df
+    except Exception as e:
+        logger.error(f"Failed to execute query: {str(e)}")
+        raise Exception(f"Failed to execute query: {str(e)}")
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == "__main__":
     logger.info("Starting SQL Executor API server...")
