@@ -52,7 +52,7 @@ RUN ./python/RAG-MODULE/installvenv.sh
 RUN chmod +x /app/Docker/docker-entrypoint.sh
 
 # Expose the application port
-EXPOSE 5640
+EXPOSE 5642
 
 # Set the entrypoint
 ENTRYPOINT ["/app/Docker/docker-entrypoint.sh"]

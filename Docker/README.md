@@ -44,7 +44,7 @@ This will build and start all the Docker containers.
 
 Once the containers are running, you can access the application at:
 
-http://localhost:5640
+http://localhost:5642
 
 ## Logs and Troubleshooting
 

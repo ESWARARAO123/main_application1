@@ -131,7 +131,7 @@ services:
       dockerfile: Docker/Dockerfile.app
     container_name: productdemo-app
     ports:
-      - "${APP_PORT:-5640}:5640"
+      - "${APP_PORT:-5642}:5642"
     volumes:
       - ../DATA:/app/DATA
       - ../logs:/app/logs

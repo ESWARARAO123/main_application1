@@ -95,7 +95,7 @@ def get_user_db_config(user_id):
         }
     return None
 
-def save_user_db_config_to_db(user_id: int, config: dict):
+def save_user_db_config_to_db(user_id: str, config: dict):
     conn = get_app_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -126,7 +126,10 @@ def get_user_id_from_username(username: str):
 @app.get("/api/db-config")
 async def get_db_config(x_username: Optional[str] = Header(None)):
     username = x_username or 'default'
-    config = get_user_db_config(x_username)
+    user_id = get_user_id_from_username(username)
+    if not user_id:
+        return JSONResponse(content={}, headers={"Content-Type": "application/json"})
+    config = get_user_db_config(user_id)
     if not config:
         return JSONResponse(content={}, headers={"Content-Type": "application/json"})
     return JSONResponse(content=config, headers={"Content-Type": "application/json"})
@@ -144,18 +147,18 @@ async def set_db_config(request: Request, x_username: Optional[str] = Header(Non
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
     # Test connection
     try:
-        print(f"!!! DEBUG: Received: host={body['host']!r}, db={body['database']!r}, user={body['user']!r}, password={body['password']!r}, port={body['port']!r}")
-        logger.info(f"[DB-CONFIG] Received: host={body['host']!r}, db={body['database']!r}, user={body['user']!r}, password={body['password']!r}, port={body['port']!r}")
+        logger.info(f"[DB-CONFIG] Trying to connect with: host={body['host']}, db={body['database']}, user={body['user']}, port={body['port']}")
         test_conn = psycopg2.connect(
             host=body['host'],
             database=body['database'],
             user=body['user'],
             password=body['password'],
-            port=body['port']
+            port=body['port'],
+            sslmode='disable'
         )
         test_conn.close()
     except Exception as e:
-        logger.error(f"[DB-CONFIG] Connection failed for user {username}: {str(e)}")
+        logger.error(f"[DB-CONFIG] Connection failed for user {username}: {repr(e)}")
         return JSONResponse(status_code=400, content={"error": f"Connection failed: {str(e)}"})
     # If x-db-test header is present and true, do not save
     if x_db_test and x_db_test.lower() == 'true':

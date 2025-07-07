@@ -67,7 +67,7 @@ class ConfigValidationService {
     const validated = {
       protocol: serverConfig.protocol || 'http',
       domain: serverConfig.domain || appConfig.host || '0.0.0.0',
-      port: this.validatePort('server.port', serverConfig.port || appConfig.port, 5640),
+      port: this.validatePort('server.port', serverConfig.port || appConfig.port, 5642),
       staticRootPath: serverConfig.static_root_path || './client/build',
       serveFromSubPath: this.validateBoolean('server.serve_from_sub_path', serverConfig.serve_from_sub_path, false)
     };

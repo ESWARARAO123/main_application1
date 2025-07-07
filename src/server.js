@@ -190,7 +190,7 @@ async function startServer() {
     });
 
     // Create HTTP server from Express app
-    const port = config.server?.port || 5640;
+    const port = config.server?.port || 5642;
     const host = config.server?.domain || '0.0.0.0';
 
     // Create HTTP server

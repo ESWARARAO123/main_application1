@@ -17,6 +17,8 @@ const DBInfoSettings: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
+  const API_URL = '/api/chat2sql/db-config'; // or use your full URL if needed
+
   // Helper to get username from localStorage (assumes user info is stored as 'user')
   function getUsername() {
     try {
@@ -34,7 +36,7 @@ const DBInfoSettings: React.FC = () => {
     const fetchConfig = async () => {
       try {
         setLoading(true);
-        const res = await axios.get('http://localhost:5000/api/db-config', {
+        const res = await axios.get('http://localhost:5000/api/chat2sql/db-config', {
           headers: { 'x-username': getUsername() }
         });
         if (res.data) {
@@ -72,11 +74,9 @@ const DBInfoSettings: React.FC = () => {
     setMessage('');
     setTestPassed(false);
     try {
-      const res = await axios.post('http://localhost:5000/api/db-config', {
+      const res = await axios.post(API_URL, {
         ...form,
         port: Number(form.port)
-      }, {
-        headers: { 'x-username': getUsername(), 'x-db-test': 'true' }
       });
       setStatus('success');
       setMessage('Connection successful!');
@@ -103,11 +103,10 @@ const DBInfoSettings: React.FC = () => {
     }
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/db-config', {
+      await axios.post(API_URL, {
         ...form,
-        port: Number(form.port)
-      }, {
-        headers: { 'x-username': getUsername() }
+        port: Number(form.port),
+        save: true
       });
       setSaveStatus('success');
       setSaveMessage('Settings saved successfully!');
