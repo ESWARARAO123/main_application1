@@ -72,10 +72,10 @@ class QueryResponse(BaseModel):
 
 def get_app_db_connection():
     return psycopg2.connect(
-        host=os.environ.get("APP_DB_HOST", "localhost"),
+        host=os.environ.get("APP_DB_HOST", "172.16.16.23"),
         database=os.environ.get("APP_DB_NAME", "copilot"),
         user=os.environ.get("APP_DB_USER", "postgres"),
-        password=os.environ.get("APP_DB_PASSWORD", "root"),
+        password=os.environ.get("APP_DB_PASSWORD", "Welcom@123"),
         port=int(os.environ.get("APP_DB_PORT", 5432))
     )
 
@@ -439,12 +439,14 @@ SQL Query:"""
 @app.post("/chat2sql/execute")
 async def execute_query_endpoint(request: Request, x_username: Optional[str] = Header(None)):
     try:
-        # Parse request body
         body = await request.json()
         query = body.get('query')
         session_id = body.get('sessionId')
         username = x_username or 'default'
-        user_config = get_user_db_config(x_username)
+        user_id = get_user_id_from_username(username)
+        if not user_id:
+            return JSONResponse(status_code=400, content={"error": "User not found."})
+        user_config = get_user_db_config(user_id)
         if not user_config:
             return JSONResponse(status_code=400, content={"error": "Database is not configured. Please set it in Settings."})
         if not query:

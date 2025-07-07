@@ -17,7 +17,7 @@ const DBInfoSettings: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
-  const API_URL = '/api/chat2sql/db-config'; // or use your full URL if needed
+  const API_URL = '/api/db-config';
 
   // Helper to get username from localStorage (assumes user info is stored as 'user')
   function getUsername() {

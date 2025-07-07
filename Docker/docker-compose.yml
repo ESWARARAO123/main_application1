@@ -131,7 +131,7 @@ services:
       dockerfile: Docker/Dockerfile.app
     container_name: productdemo-app
     ports:
-      - "${APP_PORT:-5642}:5642"
+      - "${APP_PORT:-5641}:5641"
     volumes:
       - ../DATA:/app/DATA
       - ../logs:/app/logs
@@ -160,6 +160,19 @@ services:
       - productdemo-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  chat2sql:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile.chat2sql
+    container_name: productdemo-chat2sql
+    ports:
+      - "${CHAT2SQL_PORT:-5000}:5000"
+    volumes:
+      - ../conf:/app/conf
+    restart: unless-stopped
+    networks:
+      - productdemo-network
 
 volumes:
   redis_data:
