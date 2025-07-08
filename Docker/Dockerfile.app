@@ -27,12 +27,6 @@ RUN npm install
 # Copy Python requirements
 COPY python/requirements.txt ./python/requirements.txt
 
-# Setup Python virtual environment
-RUN python3 -m venv /app/python/venv
-ENV PATH="/app/python/venv/bin:$PATH"
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r python/requirements.txt
-
 # Copy the rest of the application
 COPY . .
 
